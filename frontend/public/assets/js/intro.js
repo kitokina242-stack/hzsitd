@@ -382,31 +382,216 @@
     }, cubicIn, onDone);
   }
 
-  // Continuous language loop (runs in header forever)
+  // ===================================================================
+  // 3D Model Readiness & Dynamic Intro Gate (Option 3: Strict Hold)
+  // Loader continues animating its logo and bilingual cycle until
+  // the 3D model is 100% downloaded and ready in WebGL.
+  // ===================================================================
+  var is3DReady = !!window.__hzsitd3DReady;
+  var minTimePassed = false;
+  var exitStarted = false;
+  var currentShowingLang = 'en'; // 'en' | 'am'
+  var textTransitioning = false;
+  var activeHoldTimeout = null;
+
+  function checkReadyAndExit() {
+    if (exitStarted) return;
+    if (is3DReady && minTimePassed) {
+      if (textTransitioning) {
+        // Allow the current short text motion to finish cleanly (<1s)
+        return;
+      }
+      if (activeHoldTimeout) {
+        clearTimeout(activeHoldTimeout);
+        activeHoldTimeout = null;
+      }
+      exitStarted = true;
+      triggerExitAnimation();
+    }
+  }
+
+  window.addEventListener('hzsitd:3d-ready', function () {
+    is3DReady = true;
+    checkReadyAndExit();
+  });
+
+  // Text cycle routines while waiting for 3D model download
+  function cycleToAmharic() {
+    if (exitStarted) return;
+    textTransitioning = true;
+    showTextGroup(amTop, amBottom, 1400, function () {
+      textTransitioning = false;
+      currentShowingLang = 'am';
+      minTimePassed = true; // Minimum intro display achieved
+      if (is3DReady) {
+        checkReadyAndExit();
+        return;
+      }
+      activeHoldTimeout = setTimeout(function () {
+        if (exitStarted) return;
+        textTransitioning = true;
+        hideTextGroup(amTop, amBottom, 1200, function () {
+          textTransitioning = false;
+          if (is3DReady) {
+            checkReadyAndExit();
+            return;
+          }
+          setTimeout(cycleToEnglish, 300);
+        });
+      }, 2800);
+    });
+  }
+
+  function cycleToEnglish() {
+    if (exitStarted) return;
+    textTransitioning = true;
+    showTextGroup(enTop, enBottom, 1400, function () {
+      textTransitioning = false;
+      currentShowingLang = 'en';
+      if (is3DReady && minTimePassed) {
+        checkReadyAndExit();
+        return;
+      }
+      activeHoldTimeout = setTimeout(function () {
+        if (exitStarted) return;
+        textTransitioning = true;
+        hideTextGroup(enTop, enBottom, 1200, function () {
+          textTransitioning = false;
+          if (is3DReady && minTimePassed) {
+            checkReadyAndExit();
+            return;
+          }
+          setTimeout(cycleToAmharic, 300);
+        });
+      }, 2800);
+    });
+  }
+
+  // Continuous language loop (runs in header after landing)
   function loopLanguageSwitch() {
-    // English reveals
     showTextGroup(enTop, enBottom, 1400, function () {
       setTimeout(function () {
-        // English hides
         hideTextGroup(enTop, enBottom, 1200, function () {
           setTimeout(function () {
-            // Amharic reveals
             showTextGroup(amTop, amBottom, 1400, function () {
               setTimeout(function () {
-                // Amharic hides
                 hideTextGroup(amTop, amBottom, 1200, function () {
                   setTimeout(loopLanguageSwitch, 350);
                 });
-              }, 2800); // Amharic hold
+              }, 2800);
             });
           }, 300);
         });
-      }, 2800); // English hold
+      }, 2800);
+    });
+  }
+
+  function triggerExitAnimation() {
+    // Trigger Hero Headline and 3D Object animations simultaneously as the loader journeys to the header!
+    window.__heroShouldReveal = true;
+    var heroBanner = document.getElementById('hero-banner');
+    if (heroBanner) heroBanner.classList.add('hero-revealed');
+
+    var hero3d = document.getElementById('hero-3d-wrap');
+    if (hero3d) hero3d.classList.add('appeared');
+
+    var targetEl = _el('header-brand-placeholder');
+    var headerLogoDiv = document.querySelector('.header .logo');
+
+    // Exact pixel coordinates where the brand element should land in the header
+    var targetRect = targetEl ? targetEl.getBoundingClientRect() : null;
+    if (!targetRect || targetRect.width === 0) {
+      var headerEl = document.querySelector('.header');
+      var contEl = document.querySelector('.header .container');
+      var cRect = contEl ? contEl.getBoundingClientRect() : { left: 24, top: 20 };
+      var hRect = headerEl ? headerEl.getBoundingClientRect() : { top: 0, height: 90 };
+      targetRect = { left: cRect.left + 12, top: hRect.top + Math.max(0, (hRect.height - 92) / 2), width: 280, height: 92 };
+    }
+
+    var groupRect = group.getBoundingClientRect();
+    group.style.transformOrigin = '0 0';
+
+    var currentH = groupRect.height || 140;
+    var targetH = targetRect.height || 92;
+    var scaleRatio = targetH / currentH;
+
+    var dx = targetRect.left - groupRect.left;
+    var dy = targetRect.top - groupRect.top;
+
+    var duration = 2200;
+
+    // Smooth deceleration curve
+    function smoothDecel(t) {
+      var p = 1 - t;
+      return 1 - p * p * p;
+    }
+
+    overlay.style.pointerEvents = 'none';
+
+    tween(duration, function (t) {
+      var curScale = 1 + (scaleRatio - 1) * t;
+      group.style.transform =
+        'translate(' + (dx * t).toFixed(2) + 'px, ' + (dy * t).toFixed(2) + 'px) scale(' + curScale.toFixed(4) + ')';
+
+      // Dissolve overlay background smoothly from the very start of travel
+      overlay.style.background = 'rgba(255,255,255,' + Math.max(0, 1 - t).toFixed(3) + ')';
+    }, smoothDecel, function () {
+      // Phase 8: Seamless zero-jump handoff into target header position
+      var brandLink = document.createElement('a');
+      brandLink.href = 'index.html';
+      brandLink.className = 'header-intro-logo';
+      brandLink.id = 'header-brand-link';
+
+      brandLink.appendChild(group);
+
+      if (targetEl && targetEl.parentNode) {
+        targetEl.parentNode.replaceChild(brandLink, targetEl);
+      } else if (headerLogoDiv) {
+        headerLogoDiv.insertBefore(brandLink, headerLogoDiv.firstChild);
+      }
+
+      // Clear inline transforms so native CSS takes over cleanly
+      group.style.transform = '';
+      group.style.transformOrigin = '';
+      group.style.opacity = '';
+      logoWrap.style.transform = '';
+      logoWrap.style.opacity = '';
+
+      // Unlock scroll & remove overlay
+      document.body.classList.remove('intro-active');
+      if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+
+      // Reveal Hero Headline & 3D Object (already fully downloaded!)
+      var heroBanner = document.getElementById('hero-banner');
+      if (heroBanner) heroBanner.classList.add('hero-revealed');
+
+      var hero3d = document.getElementById('hero-3d-wrap');
+      if (hero3d) hero3d.classList.add('appeared');
+
+      // Continue alternating language switch in header
+      setTimeout(function () {
+        if (currentShowingLang === 'am') {
+          hideTextGroup(amTop, amBottom, 1200, function () {
+            setTimeout(loopLanguageSwitch, 350);
+          });
+        } else {
+          hideTextGroup(enTop, enBottom, 1200, function () {
+            setTimeout(function () {
+              showTextGroup(amTop, amBottom, 1400, function () {
+                setTimeout(function () {
+                  hideTextGroup(amTop, amBottom, 1200, function () {
+                    setTimeout(loopLanguageSwitch, 350);
+                  });
+                }, 2800);
+              });
+            }, 300);
+          });
+        }
+      }, 1200);
     });
   }
 
   function startTimeline() {
-
     /* ---- Phase 1: Logo entrance (fades in + rises) ---- */
     setTimeout(function () {
       tween(2000, function (t) {
@@ -417,116 +602,20 @@
 
     /* ---- Phase 2: English text reveal (simultaneous with logo) ---- */
     setTimeout(function () {
-      showTextGroup(enTop, enBottom, 1600);
-    }, 300);
-
-    /* ---- Phase 3 & 4: English text hides back to center ---- */
-    setTimeout(function () {
-      hideTextGroup(enTop, enBottom, 1200);
-    }, 3600);
-
-    /* ---- Phase 5: Amharic text reveal from center ---- */
-    setTimeout(function () {
-      showTextGroup(amTop, amBottom, 1400);
-    }, 5000);
-
-    /* ---- Phase 6 & 7: Smooth glide of entire group (logo + animated text) to header ---- */
-    setTimeout(function () {
-      // Trigger Hero Texts and 3D Object animations simultaneously as the loader begins its journey to the corner!
-      window.__heroShouldReveal = true;
-      var heroBanner = document.getElementById('hero-banner');
-      if (heroBanner) heroBanner.classList.add('hero-revealed');
-
-      var hero3d = document.getElementById('hero-3d-wrap');
-      if (hero3d) hero3d.classList.add('appeared');
-
-      var targetEl = _el('header-brand-placeholder');
-      var headerLogoDiv = document.querySelector('.header .logo');
-
-      // Exact pixel coordinates where the brand element should land in the header
-      var targetRect = targetEl ? targetEl.getBoundingClientRect() : null;
-      if (!targetRect || targetRect.width === 0) {
-        var headerEl = document.querySelector('.header');
-        var contEl = document.querySelector('.header .container');
-        var cRect = contEl ? contEl.getBoundingClientRect() : { left: 24, top: 20 };
-        var hRect = headerEl ? headerEl.getBoundingClientRect() : { top: 0, height: 90 };
-        targetRect = { left: cRect.left + 12, top: hRect.top + Math.max(0, (hRect.height - 92) / 2), width: 280, height: 92 };
-      }
-
-      var groupRect = group.getBoundingClientRect();
-
-      // Top-left origin for exact 1-to-1 corner mapping
-      group.style.transformOrigin = '0 0';
-
-      var currentH = groupRect.height || 140;
-      var targetH = targetRect.height || 92;
-      var scaleRatio = targetH / currentH;
-
-      // Exact translation from current top-left to target top-left
-      var dx = targetRect.left - groupRect.left;
-      var dy = targetRect.top - groupRect.top;
-
-      var duration = 2200;
-
-      // Smooth deceleration curve (Lenis-like elegance)
-      function smoothDecel(t) {
-        var p = 1 - t;
-        return 1 - p * p * p;
-      }
-
-      overlay.style.pointerEvents = 'none';
-
-      tween(duration, function (t) {
-        var curScale = 1 + (scaleRatio - 1) * t;
-        group.style.transform =
-          'translate(' + (dx * t).toFixed(2) + 'px, ' + (dy * t).toFixed(2) + 'px) scale(' + curScale.toFixed(4) + ')';
-
-        // Dissolve overlay background smoothly from the very start of travel
-        overlay.style.background = 'rgba(255,255,255,' + Math.max(0, 1 - t).toFixed(3) + ')';
-      }, smoothDecel, function () {
-        /* ---- Phase 8: Seamless zero-jump handoff into target position ---- */
-        var brandLink = document.createElement('a');
-        brandLink.href = 'index.html';
-        brandLink.className = 'header-intro-logo';
-        brandLink.id = 'header-brand-link';
-
-        // Transfer the entire group directly into the brand link
-        brandLink.appendChild(group);
-
-        // Replace the placeholder with the real live brand element
-        if (targetEl && targetEl.parentNode) {
-          targetEl.parentNode.replaceChild(brandLink, targetEl);
-        } else if (headerLogoDiv) {
-          headerLogoDiv.insertBefore(brandLink, headerLogoDiv.firstChild);
-        }
-
-        // Clear inline transforms so native CSS takes over cleanly
-        group.style.transform = '';
-        group.style.transformOrigin = '';
-        group.style.opacity = '';
-        logoWrap.style.transform = '';
-        logoWrap.style.opacity = '';
-
-        // Unlock scroll & remove overlay
-        document.body.classList.remove('intro-active');
-        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-
-        // Reveal Hero Headline (slides in gracefully from left and right)
-        var heroBanner = document.getElementById('hero-banner');
-        if (heroBanner) heroBanner.classList.add('hero-revealed');
-
-        // Reveal Hero 3D Object
-        var hero3d = document.getElementById('hero-3d-wrap');
-        if (hero3d) hero3d.classList.add('appeared');
-
-        // Continue continuous language loop
-        setTimeout(function () {
-          hideTextGroup(amTop, amBottom, 1200, function () {
-            setTimeout(loopLanguageSwitch, 350);
+      textTransitioning = true;
+      showTextGroup(enTop, enBottom, 1600, function () {
+        textTransitioning = false;
+        currentShowingLang = 'en';
+        activeHoldTimeout = setTimeout(function () {
+          if (exitStarted) return;
+          textTransitioning = true;
+          hideTextGroup(enTop, enBottom, 1200, function () {
+            textTransitioning = false;
+            setTimeout(cycleToAmharic, 300);
           });
-        }, 1200);
+        }, 2400);
       });
-    }, 7200);
+    }, 300);
   }
 
   // Wait for custom fonts to load, then fire the timeline

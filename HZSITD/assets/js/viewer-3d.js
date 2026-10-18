@@ -117,6 +117,12 @@
           setupModelInView(heroView);
           setupModelInView(footerView);
 
+          // Signal that the 3D model is 100% downloaded and configured in WebGL scene
+          window.__hzsitd3DReady = true;
+          try {
+            window.dispatchEvent(new CustomEvent('hzsitd:3d-ready'));
+          } catch (e) {}
+
           var hasIntro = document.getElementById('intro-overlay');
           if (!hasIntro || window.__heroShouldReveal) {
             if (heroWrap) heroWrap.classList.add('appeared');
@@ -157,6 +163,10 @@
         undefined,
         function (err) {
           console.error('Failed to load bezabih.glb:', err);
+          window.__hzsitd3DReady = true;
+          try {
+            window.dispatchEvent(new CustomEvent('hzsitd:3d-ready'));
+          } catch (e) {}
         }
       );
     }, 300);

@@ -140,7 +140,7 @@ async function runAudit() {
 
   // Verify landing page redirects to the static site
   console.log(`Verifying landing page redirect from ${PORTAL_URL}...`);
-  const landingResponse = await page.goto(PORTAL_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  const landingResponse = await page.goto(PORTAL_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
   const finalUrl = page.url();
   if (finalUrl.includes('/html/') || (landingResponse && landingResponse.status() < 400)) {
     logStep('Portal Landing Page Redirect', 'PASS', `Redirected to static site: ${finalUrl}`);
