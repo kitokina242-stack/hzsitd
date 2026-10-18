@@ -4,6 +4,7 @@ import React from 'react';
 import Image from 'next/image';
 import { useGetLetterByIdQuery, useExecuteLetterActionMutation } from '../services/letterApi';
 import { useAppSelector } from '@/store';
+import { Letter } from '@/types/letter';
 import { StatusPill } from './StatusPill';
 import { PriorityBadge } from './PriorityBadge';
 import {
@@ -19,18 +20,21 @@ import {
   ExternalLink,
   Eye,
   FileCheck,
+  Share2,
 } from 'lucide-react';
 
 interface LetterDetailsSheetProps {
   letterId: number | null;
   onClose: () => void;
   onOpenFullDocument?: (id: number, tab?: 'document' | 'pdf' | 'attachments') => void;
+  onMinuteAndAssign?: (letter: Letter) => void;
 }
 
 export const LetterDetailsSheet: React.FC<LetterDetailsSheetProps> = ({
   letterId,
   onClose,
   onOpenFullDocument,
+  onMinuteAndAssign,
 }) => {
   const activeRole = useAppSelector((state) => state.auth.activeRole);
   const { data, isLoading } = useGetLetterByIdQuery(letterId as number, {
@@ -391,19 +395,35 @@ export const LetterDetailsSheet: React.FC<LetterDetailsSheetProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Dept Head Action */}
-            {activeRole === 'Department Head' &&
-              letter?.approval_stage === 'Department Head Endorsement' && (
-                <button
-                  type="button"
-                  disabled={isActionLoading}
-                  onClick={() => handleAction('endorse_and_seal', 'Endorsed by Department Head')}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-xs"
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  Endorse &amp; Sign
-                </button>
-              )}
+            {/* Dept Head Actions: Endorsement Seal AND Downward Dispatch to Personnel */}
+            {activeRole === 'Department Head' && (
+              <>
+                {letter && onMinuteAndAssign && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onMinuteAndAssign(letter);
+                      onClose();
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition shadow-xs cursor-pointer"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Minute &amp; Dispatch Down</span>
+                  </button>
+                )}
+                {letter?.approval_stage === 'Department Head Endorsement' && (
+                  <button
+                    type="button"
+                    disabled={isActionLoading}
+                    onClick={() => handleAction('endorse_and_seal', 'Endorsed by Department Head')}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-xs cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Endorse &amp; Sign
+                  </button>
+                )}
+              </>
+            )}
 
             {/* Directory Lead Action */}
             {activeRole === 'Directory Lead' &&

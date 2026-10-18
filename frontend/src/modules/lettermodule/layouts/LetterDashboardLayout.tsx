@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useAppSelector } from '@/store';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { logout } from '@/modules/authmodule/features/authSlice';
 import {
   useGetStatsQuery,
   useGetLettersQuery,
@@ -51,6 +52,7 @@ import {
   CornerDownRight,
   Paperclip,
   ExternalLink,
+  LogOut,
 } from 'lucide-react';
 
 export type NavKey =
@@ -111,6 +113,17 @@ export const LetterDashboardLayout: React.FC = () => {
 
   const activeRole = useAppSelector((state) => state.auth.activeRole);
   const currentUser = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem('hzsitd_token');
+      localStorage.removeItem('hzsitd_user');
+      sessionStorage.clear();
+    } catch (e) {}
+    dispatch(logout());
+    window.location.href = '/html/index.html';
+  };
 
   const [currentNav, setCurrentNav] = useState<NavKey>('dashboard');
   const [selectedDirId, setSelectedDirId] = useState<number | null>(null);
@@ -264,7 +277,7 @@ export const LetterDashboardLayout: React.FC = () => {
           {/* Brand Top Header with Official Animated Crest from Loader */}
           <div className="px-4 py-2 border-b border-slate-200/70 flex items-center justify-between">
             <a
-              href="http://localhost:8000/html/index.html"
+              href="/html/index.html"
               title="Return to Public Website"
               className="flex items-center group focus:outline-none"
             >
@@ -275,13 +288,15 @@ export const LetterDashboardLayout: React.FC = () => {
                 style={{ overflow: 'hidden' }}
               />
             </a>
-            <a
-              href="http://localhost:8000/html/index.html"
-              title="Return to Public Website"
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition flex items-center justify-center flex-shrink-0"
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Sign Out & Return to Portal Homepage"
+              aria-label="Sign Out"
+              className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition flex items-center justify-center flex-shrink-0 cursor-pointer"
             >
-              <ExternalLink className="w-4 h-4" />
-            </a>
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Navigation Groups — Role-Specific Sidebar */}
@@ -2595,13 +2610,17 @@ export const LetterDashboardLayout: React.FC = () => {
         </main>
       </div>
 
-      {/* Slide-out Details Sheet (with "Full Document View" button) */}
+      {/* Slide-out Details Sheet (with "Full Document View" and "Minute & Dispatch Down" buttons) */}
       <LetterDetailsSheet
         letterId={selectedLetterId}
         onClose={() => setSelectedLetterId(null)}
         onOpenFullDocument={(id, tab = 'document') => {
           setFullDocTab(tab);
           setFullDocLetterId(id);
+        }}
+        onMinuteAndAssign={(letter) => {
+          setAssignModalLetter(letter);
+          setAssignModalMode(activeRole === 'Directory Lead' ? 'delegate_officer' : 'assign_directory');
         }}
       />
 
