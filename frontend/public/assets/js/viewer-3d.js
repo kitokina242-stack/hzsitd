@@ -81,11 +81,23 @@
       if (footerWrap) observer.observe(footerWrap);
     }
 
-    // Load original bezabih.glb with static version tag so browser can cache it
+    // If on a mobile device or screen narrower than 992px, do not load or render 3D scenes
+    if (window.innerWidth < 992) {
+      window.__hzsitd3DReady = true;
+      try { window.dispatchEvent(new CustomEvent('hzsitd:3d-ready')); } catch (e) {}
+      return;
+    }
+
+    // Load optimized bezabih.glb with DRACOLoader support
     var loader = new THREE.GLTFLoader();
+    if (typeof THREE.DRACOLoader !== 'undefined') {
+      var dracoLoader = new THREE.DRACOLoader();
+      dracoLoader.setDecoderPath('../assets/libs/three/draco/');
+      loader.setDRACOLoader(dracoLoader);
+    }
     setTimeout(function () {
       loader.load(
-        '../assets/bezabih.glb?v=pure_original_v4',
+        '../assets/bezabih.glb?v=opt_a_v1',
         function (gltf) {
           var baseModel = gltf.scene;
 

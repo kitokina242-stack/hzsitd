@@ -40,12 +40,28 @@
     return [mx + px * s, my + py * s];
   })();
 
-  _el('gearSpin').setAttribute('from', '0 ' + CX.toFixed(2) + ' ' + CY.toFixed(2));
-  _el('gearSpin').setAttribute('to',  '360 ' + CX.toFixed(2) + ' ' + CY.toFixed(2));
-  _el('sunSpin').setAttribute('from', '0 ' + (CX + SUN_DX).toFixed(2) + ' ' + (CY + SUN_DY).toFixed(2));
-  _el('sunSpin').setAttribute('to',  '-360 ' + (CX + SUN_DX).toFixed(2) + ' ' + (CY + SUN_DY).toFixed(2));
-  _el('gearHole').setAttribute('cx', CX.toFixed(2));
-  _el('gearHole').setAttribute('cy', CY.toFixed(2));
+  var prefixes = [''];
+  if (_el('m-intro-svg')) {
+    prefixes.push('m-');
+  }
+
+  prefixes.forEach(function (pfx) {
+    var gs = _el(pfx + 'gearSpin');
+    if (gs) {
+      gs.setAttribute('from', '0 ' + CX.toFixed(2) + ' ' + CY.toFixed(2));
+      gs.setAttribute('to',  '360 ' + CX.toFixed(2) + ' ' + CY.toFixed(2));
+    }
+    var ss = _el(pfx + 'sunSpin');
+    if (ss) {
+      ss.setAttribute('from', '0 ' + (CX + SUN_DX).toFixed(2) + ' ' + (CY + SUN_DY).toFixed(2));
+      ss.setAttribute('to',  '-360 ' + (CX + SUN_DX).toFixed(2) + ' ' + (CY + SUN_DY).toFixed(2));
+    }
+    var gh = _el(pfx + 'gearHole');
+    if (gh) {
+      gh.setAttribute('cx', CX.toFixed(2));
+      gh.setAttribute('cy', CY.toFixed(2));
+    }
+  });
 
   // ---- Catmull-Rom spline ----
   function splinePath(pts) {
@@ -73,90 +89,105 @@
   var blueD  = 'M' + fmt(T) + ' ' + C1 + ' ' + C2rev + 'Z';
   var greenD = 'M' + fmt(T) + ' ' + C2fwd + ' ' + OUTER + ' Z';
 
-  document.querySelectorAll('.blueD').forEach(function (p) { p.setAttribute('d', blueD); });
-  document.querySelectorAll('.greenD').forEach(function (p) { p.setAttribute('d', greenD); });
-  _el('outlineOuter').setAttribute('d', 'M' + fmt(U) + ' ' + OUTER);
-  _el('outlineC1').setAttribute('d', 'M' + fmt(T) + ' ' + C1);
-  _el('outlineC2').setAttribute('d', 'M' + fmt(T) + ' ' + C2fwd);
+  document.querySelectorAll('.blueD, .m-blueD').forEach(function (p) { p.setAttribute('d', blueD); });
+  document.querySelectorAll('.greenD, .m-greenD').forEach(function (p) { p.setAttribute('d', greenD); });
 
-  // ---- gear clip ----
-  (function () {
+  prefixes.forEach(function (pfx) {
+    var oo = _el(pfx + 'outlineOuter');
+    if (oo) oo.setAttribute('d', 'M' + fmt(U) + ' ' + OUTER);
+    var oc1 = _el(pfx + 'outlineC1');
+    if (oc1) oc1.setAttribute('d', 'M' + fmt(T) + ' ' + C1);
+    var oc2 = _el(pfx + 'outlineC2');
+    if (oc2) oc2.setAttribute('d', 'M' + fmt(T) + ' ' + C2fwd);
+
     var top = globePt(420, A_T), bot = globePt(420, A_U);
-    _el('gearClipPath').setAttribute('d',
-      'M' + fmt(top) + ' L' + fmt(T) + ' ' + C1 + ' L' + fmt(bot) +
-      ' L1100 800 L1100 -100 L' + top[0].toFixed(2) + ' -100 Z');
-  })();
-
-  // ---- gear ----
-  (function () {
-    var rootR = R, tipR = R + TOOTH_H, teeth = 12;
-    var pitch = rad(360 / teeth), baseHalf = rad(10.5), tipHalf = rad(8);
-    var first = rad(-101);
-    var pt = function (r, a) { return (CX + r * Math.cos(a)).toFixed(2) + ' ' + (CY + r * Math.sin(a)).toFixed(2); };
-    var d = 'M' + pt(rootR, first - baseHalf) + ' ';
-    for (var i = 0; i < teeth; i++) {
-      var a = first + i * pitch;
-      d += 'L' + pt(tipR, a - tipHalf) +
-           ' A' + tipR + ' ' + tipR + ' 0 0 1 ' + pt(tipR, a + tipHalf) +
-           ' L' + pt(rootR, a + baseHalf) +
-           ' A' + rootR + ' ' + rootR + ' 0 0 1 ' + pt(rootR, a + pitch - baseHalf) + ' ';
+    var gcp = _el(pfx + 'gearClipPath');
+    if (gcp) {
+      gcp.setAttribute('d',
+        'M' + fmt(top) + ' L' + fmt(T) + ' ' + C1 + ' L' + fmt(bot) +
+        ' L1100 800 L1100 -100 L' + top[0].toFixed(2) + ' -100 Z');
     }
-    _el('gearPath').setAttribute('d', d + 'Z');
-  })();
 
-  // ---- sun (12 sharp rays) ----
-  (function () {
-    var cx = CX + SUN_DX, cy = CY + SUN_DY, spikes = 12, tipR = 118, baseR = 72;
-    var half = (Math.PI / spikes) / 2;
-    var pt = function (r, a) { return (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2); };
-    var d = '';
-    for (var i = 0; i < spikes; i++) {
-      var a = i * 2 * Math.PI / spikes - Math.PI / 2;
-      d += (i ? 'L' : 'M') + pt(baseR, a - half) + ' L' + pt(tipR, a) + ' L' + pt(baseR, a + half) + ' ';
+    var gp = _el(pfx + 'gearPath');
+    if (gp) {
+      var rootR = R, tipR = R + TOOTH_H, teeth = 12;
+      var pitch = rad(360 / teeth), baseHalf = rad(10.5), tipHalf = rad(8);
+      var first = rad(-101);
+      var pt = function (r, a) { return (CX + r * Math.cos(a)).toFixed(2) + ' ' + (CY + r * Math.sin(a)).toFixed(2); };
+      var gd = 'M' + pt(rootR, first - baseHalf) + ' ';
+      for (var i = 0; i < teeth; i++) {
+        var a = first + i * pitch;
+        gd += 'L' + pt(tipR, a - tipHalf) +
+              ' A' + tipR + ' ' + tipR + ' 0 0 1 ' + pt(tipR, a + tipHalf) +
+              ' L' + pt(rootR, a + baseHalf) +
+              ' A' + rootR + ' ' + rootR + ' 0 0 1 ' + pt(rootR, a + pitch - baseHalf) + ' ';
+      }
+      gp.setAttribute('d', gd + 'Z');
     }
-    _el('sunPath').setAttribute('d', d + 'Z');
-  })();
 
-  // ---- wifi pulse ----
-  (function () {
-    var cx = 343, cy = 51;
-    [21, 33, 45].forEach(function (r, i) {
-      var k = r * 0.7071;
-      var p = document.createElementNS(NS, 'path');
-      p.setAttribute('d', 'M' + (cx - k).toFixed(2) + ' ' + (cy - k).toFixed(2) +
-        ' A' + r + ' ' + r + ' 0 0 1 ' + (cx + k).toFixed(2) + ' ' + (cy - k).toFixed(2));
-      var an = document.createElementNS(NS, 'animate');
-      an.setAttribute('attributeName', 'opacity');
-      an.setAttribute('values', '0.2;1;0.2');
-      an.setAttribute('dur', '1.6s');
-      an.setAttribute('begin', (i * 0.25) + 's');
-      an.setAttribute('repeatCount', 'indefinite');
-      p.appendChild(an);
-      _el('wifi').appendChild(p);
-    });
-  })();
+    var sp = _el(pfx + 'sunPath');
+    if (sp) {
+      var scx = CX + SUN_DX, scy = CY + SUN_DY, spikes = 12, stipR = 118, sbaseR = 72;
+      var shalf = (Math.PI / spikes) / 2;
+      var spt = function (r, a) { return (scx + r * Math.cos(a)).toFixed(2) + ' ' + (scy + r * Math.sin(a)).toFixed(2); };
+      var sd = '';
+      for (var si = 0; si < spikes; si++) {
+        var sa = si * 2 * Math.PI / spikes - Math.PI / 2;
+        sd += (si ? 'L' : 'M') + spt(sbaseR, sa - shalf) + ' L' + spt(stipR, sa) + ' L' + spt(sbaseR, sa + shalf) + ' ';
+      }
+      sp.setAttribute('d', sd + 'Z');
+    }
+
+    var wifi = _el(pfx + 'wifi');
+    if (wifi) {
+      var cx = 343, cy = 51;
+      [21, 33, 45].forEach(function (r, i) {
+        var k = r * 0.7071;
+        var p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', 'M' + (cx - k).toFixed(2) + ' ' + (cy - k).toFixed(2) +
+          ' A' + r + ' ' + r + ' 0 0 1 ' + (cx + k).toFixed(2) + ' ' + (cy - k).toFixed(2));
+        var an = document.createElementNS(NS, 'animate');
+        an.setAttribute('attributeName', 'opacity');
+        an.setAttribute('values', '0.2;1;0.2');
+        an.setAttribute('dur', '1.6s');
+        an.setAttribute('begin', (i * 0.25) + 's');
+        an.setAttribute('repeatCount', 'indefinite');
+        p.appendChild(an);
+        wifi.appendChild(p);
+      });
+    }
+  });
 
   // ---- green waves ----
   var WAVE_CX = 300, WAVE_CY = 700, WAVE_STEP = 57, WAVE_RINGS = 14;
   var WAVE_STEP_MS = 750;
   var waveCols = ['#c4e80a','#a6dc00','#8ed100','#6cbf00','#47a700','#3b9a08','#2e8c12','#8ed100'];
-  var waveCircles = [];
-  (function () {
+  var waveCirclesMap = {};
+  prefixes.forEach(function (pfx) {
+    var wContainer = _el(pfx + 'waves');
+    if (!wContainer) return;
+    waveCirclesMap[pfx] = [];
     for (var j = WAVE_RINGS - 1; j >= 0; j--) {
       var c = document.createElementNS(NS, 'circle');
       c.setAttribute('cx', WAVE_CX);
       c.setAttribute('cy', WAVE_CY);
-      _el('waves').appendChild(c);
-      waveCircles[j] = c;
+      wContainer.appendChild(c);
+      waveCirclesMap[pfx][j] = c;
     }
-  })();
+  });
   function updateWaves(now) {
     var p = now / WAVE_STEP_MS, n = Math.floor(p), f = p - n, len = waveCols.length;
-    for (var j = 0; j < WAVE_RINGS; j++) {
-      var idx = (((j - 1 - n) % len) + len) % len;
-      waveCircles[j].setAttribute('r', ((j + f) * WAVE_STEP).toFixed(2));
-      waveCircles[j].setAttribute('fill', waveCols[idx]);
-    }
+    prefixes.forEach(function (pfx) {
+      var circles = waveCirclesMap[pfx];
+      if (!circles) return;
+      for (var j = 0; j < WAVE_RINGS; j++) {
+        if (circles[j]) {
+          var idx = (((j - 1 - n) % len) + len) % len;
+          circles[j].setAttribute('r', ((j + f) * WAVE_STEP).toFixed(2));
+          circles[j].setAttribute('fill', waveCols[idx]);
+        }
+      }
+    });
   }
   updateWaves(0);
 
@@ -206,22 +237,26 @@
     return defs;
   })();
   var rows = [], cells = [];
-  rowDefs.forEach(function (def) {
-    var g = document.createElementNS(NS, 'g');
-    var row = { g: g, cells: [], hold: 0 };
-    def.s.split('').forEach(function (ch, i) {
-      var t = document.createElementNS(NS, 'text');
-      t.setAttribute('x', (def.x0 + i * COL_GAP).toFixed(2));
-      t.setAttribute('y', def.y);
-      t.setAttribute('dy', '.36em');
-      t.textContent = ch;
-      g.appendChild(t);
-      var c = { el: t, hold: 0 };
-      row.cells.push(c);
-      cells.push(c);
+  prefixes.forEach(function (pfx) {
+    var digitsEl = _el(pfx + 'digits');
+    if (!digitsEl) return;
+    rowDefs.forEach(function (def) {
+      var g = document.createElementNS(NS, 'g');
+      var row = { g: g, cells: [], hold: 0 };
+      def.s.split('').forEach(function (ch, i) {
+        var t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', (def.x0 + i * COL_GAP).toFixed(2));
+        t.setAttribute('y', def.y);
+        t.setAttribute('dy', '.36em');
+        t.textContent = ch;
+        g.appendChild(t);
+        var c = { el: t, hold: 0 };
+        row.cells.push(c);
+        cells.push(c);
+      });
+      digitsEl.appendChild(g);
+      rows.push(row);
     });
-    _el('digits').appendChild(g);
-    rows.push(row);
   });
 
   var colors = ['#ffffff','#ffffff','#ffffff','#9fe4ff','#d6f3ff'];
@@ -283,8 +318,12 @@
     return 'M' + outer.map(fmt).join(' L') + ' L' + inner.reverse().map(fmt).join(' L') + ' Z';
   }
   var OVERLAP = 3;
-  _el('ringFront').setAttribute('d', ringPath(-OVERLAP, RH + OVERLAP));
-  _el('ringBack').setAttribute('d', ringPath(RH - OVERLAP, RN + OVERLAP));
+  prefixes.forEach(function (pfx) {
+    var rf = _el(pfx + 'ringFront');
+    if (rf) rf.setAttribute('d', ringPath(-OVERLAP, RH + OVERLAP));
+    var rb = _el(pfx + 'ringBack');
+    if (rb) rb.setAttribute('d', ringPath(RH - OVERLAP, RN + OVERLAP));
+  });
 
   // arc-length table for constant-speed ball
   var ringCum = [0], prevPt = ringPoint(0);
@@ -296,7 +335,13 @@
   var RING_LEN = ringCum[RN];
 
   // ---- ball orbit ----
-  var ball = _el('ball'), frontLayer = _el('frontLayer'), backLayer = _el('backLayer');
+  var ballMap = {}, frontMap = {}, backMap = {};
+  prefixes.forEach(function (pfx) {
+    ballMap[pfx] = _el(pfx + 'ball');
+    frontMap[pfx] = _el(pfx + 'frontLayer');
+    backMap[pfx] = _el(pfx + 'backLayer');
+  });
+
   var PERIOD = 6500;
   function placeBall(now) {
     var d = ((now / PERIOD) % 1) * RING_LEN;
@@ -305,9 +350,13 @@
     var k = (d - ringCum[lo]) / ((ringCum[lo + 1] - ringCum[lo]) || 1);
     var t = ringT(lo + k), pos = ringPoint(t);
     var depth = Math.sin(t), s = 1 + 0.1 * depth;
-    ball.setAttribute('transform', 'translate(' + pos[0].toFixed(2) + ' ' + pos[1].toFixed(2) + ') scale(' + s.toFixed(3) + ')');
-    var target = depth >= 0 ? frontLayer : backLayer;
-    if (ball.parentNode !== target) target.appendChild(ball);
+    prefixes.forEach(function (pfx) {
+      var ball = ballMap[pfx], frontLayer = frontMap[pfx], backLayer = backMap[pfx];
+      if (!ball || !frontLayer || !backLayer) return;
+      ball.setAttribute('transform', 'translate(' + pos[0].toFixed(2) + ' ' + pos[1].toFixed(2) + ') scale(' + s.toFixed(3) + ')');
+      var target = depth >= 0 ? frontLayer : backLayer;
+      if (ball.parentNode !== target) target.appendChild(ball);
+    });
   }
   placeBall(0);
 
@@ -592,6 +641,12 @@
   }
 
   function startTimeline() {
+    // If on a mobile device or screen narrower than 992px, do not run the desktop intro timeline.
+    // The mobile blocker overlay remains active to show the desktop workstation notice.
+    if (window.innerWidth <= 991.98) {
+      return;
+    }
+
     /* ---- Phase 1: Logo entrance (fades in + rises) ---- */
     setTimeout(function () {
       tween(2000, function (t) {

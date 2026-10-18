@@ -22,6 +22,9 @@ frontend/.next/
 *.sqlite-wal
 *.sqlite-shm
 
+# Raw uncompressed 3D backups (kept safely on local disk)
+*_raw_backup.glb
+
 # Environment & local configurations
 .env*
 .vercel/
