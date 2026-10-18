@@ -35,6 +35,24 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-500 selection:text-white">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                var w = window.innerWidth;
+                var h = window.innerHeight;
+                var isLandscapePhone = (h <= 500 && w <= 950 && window.matchMedia && window.matchMedia('(orientation: landscape)').matches);
+                var isPortraitPhone = (w < 768);
+                var ua = navigator.userAgent || '';
+                var isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (w >= 768 && h >= 501);
+                var isPhone = !isTablet && (isPortraitPhone || isLandscapePhone || /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua));
+                if (isPhone) {
+                  window.location.replace('/html/index.html');
+                }
+              })();
+            `,
+          }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

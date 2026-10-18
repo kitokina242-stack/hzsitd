@@ -640,10 +640,21 @@
     });
   }
 
+  function isMobilePhone() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+    var isLandscapePhone = (h <= 500 && w <= 950 && window.matchMedia && window.matchMedia('(orientation: landscape)').matches);
+    var isPortraitPhone = (w < 768);
+    var ua = navigator.userAgent || '';
+    var isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (w >= 768 && h >= 501);
+    return !isTablet && (isPortraitPhone || isLandscapePhone || /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua));
+  }
+
   function startTimeline() {
-    // If on a mobile device or screen narrower than 992px, do not run the desktop intro timeline.
+    // If on a mobile phone (< 768px or landscape phone), do not run the desktop intro timeline.
     // The mobile blocker overlay remains active to show the desktop workstation notice.
-    if (window.innerWidth <= 991.98) {
+    // Tablets (>= 768px, like iPads) and desktops proceed normally with full intro & website execution.
+    if (isMobilePhone()) {
       return;
     }
 

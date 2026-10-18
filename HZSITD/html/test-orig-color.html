@@ -8,6 +8,20 @@
     canvas { width: 500px; height: 500px; }
     #status { position: absolute; top: 10px; }
   </style>
+  <script>
+    (function () {
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      var isLandscapePhone = (h <= 500 && w <= 950 && window.matchMedia && window.matchMedia('(orientation: landscape)').matches);
+      var isPortraitPhone = (w < 768);
+      var ua = navigator.userAgent || '';
+      var isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (w >= 768 && h >= 501);
+      var isPhone = !isTablet && (isPortraitPhone || isLandscapePhone || /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua));
+      if (isPhone) {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
 </head>
 <body>
   <div id="status">Loading original bezabih.glb...</div>

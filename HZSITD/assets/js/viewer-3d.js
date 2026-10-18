@@ -81,8 +81,18 @@
       if (footerWrap) observer.observe(footerWrap);
     }
 
-    // If on a mobile device or screen narrower than 992px, do not load or render 3D scenes
-    if (window.innerWidth < 992) {
+    function isMobilePhone() {
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      var isLandscapePhone = (h <= 500 && w <= 950 && window.matchMedia && window.matchMedia('(orientation: landscape)').matches);
+      var isPortraitPhone = (w < 768);
+      var ua = navigator.userAgent || '';
+      var isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (w >= 768 && h >= 501);
+      return !isTablet && (isPortraitPhone || isLandscapePhone || /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua));
+    }
+
+    // Only skip 3D scene loading on mobile phones. On tablets (>= 768px) and desktops, load 3D scene.
+    if (isMobilePhone()) {
       window.__hzsitd3DReady = true;
       try { window.dispatchEvent(new CustomEvent('hzsitd:3d-ready')); } catch (e) {}
       return;

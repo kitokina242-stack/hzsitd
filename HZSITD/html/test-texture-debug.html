@@ -7,6 +7,20 @@ body { margin: 0; background: #444; font-family: monospace; color: #0f0; }
 canvas { display: block; width: 100vw; height: 80vh; }
 #log { padding: 10px; max-height: 20vh; overflow-y: auto; background: #111; font-size: 13px; white-space: pre-wrap; }
 </style>
+  <script>
+    (function () {
+      var w = window.innerWidth;
+      var h = window.innerHeight;
+      var isLandscapePhone = (h <= 500 && w <= 950 && window.matchMedia && window.matchMedia('(orientation: landscape)').matches);
+      var isPortraitPhone = (w < 768);
+      var ua = navigator.userAgent || '';
+      var isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (w >= 768 && h >= 501);
+      var isPhone = !isTablet && (isPortraitPhone || isLandscapePhone || /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua));
+      if (isPhone) {
+        window.location.replace('index.html');
+      }
+    })();
+  </script>
 </head>
 <body>
 <canvas id="c"></canvas>

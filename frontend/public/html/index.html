@@ -12,7 +12,106 @@
   <link rel="stylesheet" href="../assets/libs/owl.carousel/dist/assets/owl.carousel.min.css">
   <link rel="stylesheet" href="../assets/libs/aos-master/dist/aos.css">
   <link rel="stylesheet" href="../assets/css/styles.css" />
-  <link rel="stylesheet" href="../assets/css/intro.css?v=sync_v4" />
+  <link rel="stylesheet" href="../assets/css/intro.css?v=blocker_v5" />
+  <!-- CRITICAL INLINE MOBILE PHONE BLOCKER CSS (IMMUNE TO CACHE) -->
+  <style id="mobile-phone-blocker-critical">
+    /* By default hide the mobile blocker */
+    #mobile-blocker { display: none !important; }
+
+    /* Activate strictly on Mobile Phones (< 768px or landscape phone <= 500px height).
+       Tablets (iPad, Android tablets >= 768px) and Desktops are fully allowed. */
+    @media (max-width: 767.98px), ((max-height: 500px) and (orientation: landscape) and (max-width: 950px)) {
+      html, body {
+        overflow: hidden !important;
+        height: 100% !important;
+        position: fixed !important;
+        width: 100% !important;
+      }
+      body > *:not(#mobile-blocker) {
+        display: none !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
+      #mobile-blocker {
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 2147483647 !important;
+        background: radial-gradient(circle at 50% 25%, #151d2d 0%, #080b12 100%) !important;
+        color: #ffffff !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 24px 20px !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+      #intro-overlay {
+        display: none !important;
+      }
+    }
+
+    html.is-mobile-phone body > *:not(#mobile-blocker) {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    html.is-mobile-phone #mobile-blocker {
+      display: flex !important;
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      height: 100dvh !important;
+      z-index: 2147483647 !important;
+      background: radial-gradient(circle at 50% 25%, #151d2d 0%, #080b12 100%) !important;
+      color: #ffffff !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 24px 20px !important;
+      box-sizing: border-box !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+    html.is-mobile-phone body {
+      overflow: hidden !important;
+      height: 100% !important;
+      position: fixed !important;
+      width: 100% !important;
+    }
+  </style>
+
+  <!-- Immediate Device Evaluation Script -->
+  <script>
+    (function () {
+      function evalDevice() {
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        var isLandscapePhone = (h <= 500 && w <= 950 && window.matchMedia && window.matchMedia('(orientation: landscape)').matches);
+        var isPortraitPhone = (w < 768);
+        var ua = navigator.userAgent || '';
+        var isTablet = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (w >= 768 && h >= 501);
+        var isPhone = !isTablet && (isPortraitPhone || isLandscapePhone || /iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry/i.test(ua));
+        if (isPhone) {
+          document.documentElement.classList.add('is-mobile-phone');
+        } else {
+          document.documentElement.classList.remove('is-mobile-phone');
+        }
+      }
+      evalDevice();
+      window.addEventListener('resize', evalDevice, { passive: true });
+      window.addEventListener('orientationchange', evalDevice, { passive: true });
+    })();
+  </script>
 </head>
 
 <body class="intro-active">
