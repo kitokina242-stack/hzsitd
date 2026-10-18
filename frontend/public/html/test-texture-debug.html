@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>3D Texture Debug</title>
+<style>
+body { margin: 0; background: #444; font-family: monospace; color: #0f0; }
+canvas { display: block; width: 100vw; height: 80vh; }
+#log { padding: 10px; max-height: 20vh; overflow-y: auto; background: #111; font-size: 13px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="log"></div>
+<script src="../assets/libs/three/three.min.js"></script>
+<script src="../assets/libs/three/GLTFLoader.js"></script>
+<script>
+var log = document.getElementById('log');
+function L(msg) { log.textContent += msg + '\n'; console.log(msg); }
+
+L('Three.js revision: ' + THREE.REVISION);
+L('Max texture size: will check after context...');
+
+var canvas = document.getElementById('c');
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+renderer.setSize(window.innerWidth, window.innerHeight * 0.8);
+renderer.setPixelRatio(1);
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+L('Max texture size: ' + renderer.capabilities.maxTextureSize);
+L('Max cubemap size: ' + renderer.capabilities.maxCubemapSize);
+L('WebGL version: ' + renderer.capabilities.isWebGL2 ? 'WebGL2' : 'WebGL1');
+
+var scene = new THREE.Scene();
+scene.background = new THREE.Color(0x555555);
+var camera = new THREE.PerspectiveCamera(45, window.innerWidth / (window.innerHeight * 0.8), 0.1, 100);
+camera.position.set(0, 0, 4);
+
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+var dir = new THREE.DirectionalLight(0xffffff, 1.0);
+dir.position.set(3, 5, 4);
+scene.add(dir);
+
+L('Loading bezabih.glb with cache buster...');
+var loader = new THREE.GLTFLoader();
+loader.load(
+  '../assets/bezabih.glb?t=' + Date.now(),
+  function(gltf) {
+    L('✓ GLTF loaded successfully');
+    L('Scene children: ' + gltf.scene.children.length);
+    
+    var model = gltf.scene;
+    var meshCount = 0;
+    
+    model.traverse(function(child) {
+      if (child.isMesh) {
+        meshCount++;
+        var mat = child.material;
+        L('--- Mesh: ' + child.name + ' ---');
+        L('  Material type: ' + mat.type);
+        L('  Material name: ' + mat.name);
+        L('  Color: ' + (mat.color ? mat.color.getHexString() : 'none'));
+        L('  Map (baseColor): ' + (mat.map ? 'YES' : 'NO'));
+        if (mat.map) {
+          L('    map.image: ' + (mat.map.image ? 'exists' : 'NULL'));
+          if (mat.map.image) {
+            L('    image type: ' + Object.prototype.toString.call(mat.map.image));
+            L('    image size: ' + (mat.map.image.width || '?') + 'x' + (mat.map.image.height || '?'));
+            L('    encoding: ' + mat.map.encoding);
+          }
+          L('    map.needsUpdate: ' + mat.map.needsUpdate);
+        }
+        L('  MetalnessMap: ' + (mat.metalnessMap ? 'YES' : 'NO'));
+        L('  RoughnessMap: ' + (mat.roughnessMap ? 'YES' : 'NO'));
+        L('  NormalMap: ' + (mat.normalMap ? 'YES' : 'NO'));
+        L('  Metalness: ' + mat.metalness);
+        L('  Roughness: ' + mat.roughness);
+        
+        // Check geometry attributes
+        var geo = child.geometry;
+        L('  Geometry attributes: ' + Object.keys(geo.attributes).join(', '));
+        L('  Has UVs: ' + (geo.attributes.uv ? 'YES (' + geo.attributes.uv.count + ')' : 'NO'));
+        L('  Vertices: ' + (geo.attributes.position ? geo.attributes.position.count : '?'));
+        L('  Index: ' + (geo.index ? geo.index.count + ' indices' : 'none'));
+      }
+    });
+    
+    L('Total meshes: ' + meshCount);
+    
+    // Fit model in view
+    var box = new THREE.Box3().setFromObject(model);
+    var size = box.getSize(new THREE.Vector3());
+    var center = box.getCenter(new THREE.Vector3());
+    L('Bounding box size: ' + size.x.toFixed(3) + ' x ' + size.y.toFixed(3) + ' x ' + size.z.toFixed(3));
+    
+    var maxDim = Math.max(size.x, size.y, size.z);
+    var scale = 3.0 / maxDim;
+    model.scale.setScalar(scale);
+    model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
+    
+    scene.add(model);
+    
+    function animate() {
+      requestAnimationFrame(animate);
+      model.rotation.y += 0.005;
+      renderer.render(scene, camera);
+    }
+    animate();
+  },
+  function(xhr) {
+    if (xhr.total) {
+      L('Loading: ' + Math.round(xhr.loaded / xhr.total * 100) + '%');
+    }
+  },
+  function(err) {
+    L('✗ ERROR: ' + err.message);
+    console.error(err);
+  }
+);
+</script>
+</body>
+</html>

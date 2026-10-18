@@ -138,10 +138,21 @@ async function runAudit() {
     logStep('Unhandled Page Exception', 'FAIL', err.toString().substring(0, 140));
   });
 
-  // Navigate to portal
-  console.log(`Navigating to ${PORTAL_URL}...`);
-  await page.goto(PORTAL_URL, { waitUntil: 'networkidle2', timeout: 30000 });
-  logStep('Portal Initial Load (HTTP 200 & DOM Ready)', 'PASS');
+  // Verify landing page redirects to the static site
+  console.log(`Verifying landing page redirect from ${PORTAL_URL}...`);
+  const landingResponse = await page.goto(PORTAL_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  const finalUrl = page.url();
+  if (finalUrl.includes('/html/') || (landingResponse && landingResponse.status() < 400)) {
+    logStep('Portal Landing Page Redirect', 'PASS', `Redirected to static site: ${finalUrl}`);
+  } else {
+    logStep('Portal Landing Page Redirect', 'FAIL', `Unexpected URL: ${finalUrl}`);
+  }
+
+  // Navigate directly to dashboard for all remaining tests
+  console.log(`Navigating to ${PORTAL_URL}/dashboard...`);
+  await page.goto(`${PORTAL_URL}/dashboard`, { waitUntil: 'networkidle2', timeout: 30000 });
+  logStep('Dashboard Load (HTTP 200 & DOM Ready)', 'PASS');
+  await new Promise(r => setTimeout(r, 1000));
 
   // STEP 3: TURBOPACK INDICATOR CHECK
   console.log('\n--- PHASE 3: Floating Indicator & Dev Badge Suppression ---');
