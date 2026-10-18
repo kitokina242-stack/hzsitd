@@ -506,7 +506,7 @@ export const HZSITDLoaderLogo: React.FC<HZSITDLoaderLogoProps> = ({
                 style={{ fontFamily: "'Elegant', Georgia, serif", fontSize: '13.5px' }}
                 className="block text-slate-900 font-normal whitespace-nowrap tracking-wide"
               >
-                Hossana Zone Science
+                Hadiya Zone Science
               </span>
             </div>
             <div className="overflow-hidden leading-snug mt-0.5">
@@ -532,7 +532,7 @@ export const HZSITDLoaderLogo: React.FC<HZSITDLoaderLogoProps> = ({
                 style={{ fontFamily: "'LogaDisplay', Nyala, sans-serif", fontSize: '13.5px' }}
                 className="block text-slate-900 font-normal whitespace-nowrap tracking-normal"
               >
-                ሆሳዕና ዞን ሳይንስና
+                ሃዲያ ዞን ሳይንስና
               </span>
             </div>
             <div className="overflow-hidden leading-snug mt-0.5">

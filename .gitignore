@@ -8,9 +8,13 @@ HZSITD/node_modules/
 .next/
 */.next/
 frontend/.next/
-out/
-build/
-dist/
+/out/
+/build/
+/dist/
+
+# Ensure all public vendor assets and libraries are tracked
+!frontend/public/assets/
+!HZSITD/assets/
 
 # Database temporary files & SQLite locks
 *.db-wal

@@ -11,30 +11,34 @@ $(function () {
 
 
     // Featured Owl Carousel
-    $('.featured-projects-slider .owl-carousel').owlCarousel({
-        center: true,
-        loop: true,
-        margin: 30,
-        nav: false,
-        dots: false,
-        autoplay: true,
-        autoplayTimeout: 5000,
-        autoplayHoverPause: false,
-        responsive: {
-            0: {
-                items: 1
-            },
-            600: {
-                items: 2
-            },
-            1000: {
-                items: 3
-            },
-            1200: {
-                items: 4
+    if ($.fn.owlCarousel) {
+        $('.featured-projects-slider .owl-carousel').owlCarousel({
+            center: true,
+            loop: true,
+            margin: 30,
+            nav: false,
+            dots: false,
+            autoplay: true,
+            autoplayTimeout: 5000,
+            autoplayHoverPause: false,
+            responsive: {
+                0: {
+                    items: 1
+                },
+                600: {
+                    items: 2
+                },
+                1000: {
+                    items: 3
+                },
+                1200: {
+                    items: 4
+                }
             }
-        }
-    })
+        });
+    }
+
+
 
 
     // Count
