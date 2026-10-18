@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoSIT Logo - Faithful Vector Reconstruction v2</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+      color: #eee;
+    }
+    h1 { font-size: 18px; margin-bottom: 10px; color: #aaa; }
+    .comparison {
+      display: flex;
+      gap: 40px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .panel {
+      text-align: center;
+    }
+    .panel h3 {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .panel.original img {
+      max-width: 360px;
+      height: auto;
+    }
+    .panel.vector svg {
+      width: 360px;
+      height: auto;
+    }
+    .bg-white { background: #fff; border-radius: 12px; padding: 20px; }
+    .bg-dark { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid #333; }
+
+    /* === ANIMATIONS === */
+    @keyframes gearSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes sunPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+    @keyframes waveA { 0%,100%{opacity:.2} 30%,70%{opacity:1} }
+    @keyframes waveB { 0%,100%{opacity:.15} 40%,80%{opacity:1} }
+    @keyframes waveC { 0%,100%{opacity:.1} 50%,90%{opacity:1} }
+    @keyframes leafBreath {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.01) rotate(-0.3deg); }
+    }
+    @keyframes electronOrbit {
+      0%   { offset-distance: 0%; }
+      100% { offset-distance: 100%; }
+    }
+    @keyframes binaryScroll {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-30px); }
+    }
+
+    .anim-gear {
+      transform-origin: 258px 230px;
+      animation: gearSpin 25s linear infinite;
+    }
+    .anim-sun {
+      transform-origin: 250px 178px;
+      animation: sunPulse 3s ease-in-out infinite;
+    }
+    .anim-waveA { animation: waveA 2s ease-in-out infinite; }
+    .anim-waveB { animation: waveB 2s ease-in-out infinite 0.3s; }
+    .anim-waveC { animation: waveC 2s ease-in-out infinite 0.6s; }
+    .anim-leaf {
+      transform-origin: 200px 250px;
+      animation: leafBreath 6s ease-in-out infinite;
+    }
+    .anim-electron {
+      offset-path: path("M 120 330 C 80 370 60 350 100 300 C 155 225 270 130 380 115 C 430 108 445 140 410 190 C 350 275 180 370 120 330 Z");
+      animation: electronOrbit 7s linear infinite;
+    }
+    .anim-binary {
+      animation: binaryScroll 5s linear infinite;
+    }
+  </style>
+</head>
+<body>
+
+<h1>DoSIT Logo — Faithful Vector Reconstruction v2</h1>
+
+<div class="comparison">
+  <!-- Original reference -->
+  <div class="panel original">
+    <h3>Original Source</h3>
+    <div class="bg-white">
+      <img src="logo_original.png" alt="Original Logo">
+    </div>
+  </div>
+
+  <!-- Reconstructed Vector -->
+  <div class="panel vector">
+    <h3>Vector Reconstruction (White BG)</h3>
+    <div class="bg-white">
+      <svg viewBox="0 0 480 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Text cyan gradient -->
+          <linearGradient id="v2Cyan" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#00A8E0"/>
+            <stop offset="100%" stop-color="#0077B5"/>
+          </linearGradient>
+          
+          <!-- Gear gradient -->
+          <linearGradient id="v2Gear" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#D4A84B"/>
+            <stop offset="40%" stop-color="#C49435"/>
+            <stop offset="100%" stop-color="#A07828"/>
+          </linearGradient>
+          
+          <!-- Sun gradient -->
+          <radialGradient id="v2Sun" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FF9E2C"/>
+            <stop offset="60%" stop-color="#F57C00"/>
+            <stop offset="100%" stop-color="#E65100"/>
+          </radialGradient>
+
+          <!-- Blue digital bg -->
+          <linearGradient id="v2Blue" x1="0" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stop-color="#1565C0"/>
+            <stop offset="100%" stop-color="#0D47A1"/>
+          </linearGradient>
+
+          <!-- Leaf dark -->
+          <linearGradient id="v2LeafDk" x1="0.3" y1="0" x2="0.7" y2="1">
+            <stop offset="0%" stop-color="#1B5E20"/>
+            <stop offset="100%" stop-color="#0D3B12"/>
+          </linearGradient>
+          <!-- Leaf mid -->
+          <linearGradient id="v2LeafMd" x1="0.3" y1="0" x2="0.7" y2="1">
+            <stop offset="0%" stop-color="#43A047"/>
+            <stop offset="100%" stop-color="#2E7D32"/>
+          </linearGradient>
+          <!-- Leaf light -->
+          <linearGradient id="v2LeafLt" x1="0.2" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stop-color="#C0CA33"/>
+            <stop offset="50%" stop-color="#8BC34A"/>
+            <stop offset="100%" stop-color="#689F38"/>
+          </linearGradient>
+
+          <!-- Clip for inner circle -->
+          <clipPath id="v2CoreClip">
+            <circle cx="258" cy="230" r="85"/>
+          </clipPath>
+        </defs>
+
+        <!-- ==== TEXT "D0SiT" ==== -->
+        <!-- The text sits at the top, slightly left-of-center -->
+        <g id="textGroup">
+          <!-- D -->
+          <path d="M 30 22 L 30 78 L 56 78 C 74 78 86 66 86 50 C 86 34 74 22 56 22 Z 
+                   M 42 33 L 54 33 C 67 33 74 40 74 50 C 74 60 67 67 54 67 L 42 67 Z" 
+                fill="url(#v2Cyan)"/>
+          
+          <!-- 0 (zero, slightly narrower than O) -->
+          <path d="M 112 22 C 95 22 85 34 85 50 C 85 66 95 78 112 78 C 129 78 139 66 139 50 C 139 34 129 22 112 22 Z 
+                   M 112 33 C 122 33 127 40 127 50 C 127 60 122 67 112 67 C 102 67 97 60 97 50 C 97 40 102 33 112 33 Z" 
+                fill="url(#v2Cyan)"/>
+          
+          <!-- S -->
+          <path d="M 170 33 C 166 27 159 22 150 22 C 140 22 133 28 133 36 C 133 44 140 48 151 51 L 155 52 
+                   C 168 56 175 61 175 71 C 175 81 165 86 153 86 C 143 86 134 82 128 74 L 136 66 
+                   C 140 72 147 75 153 75 C 160 75 165 72 165 67 C 165 62 159 59 149 56 L 145 55 
+                   C 132 51 125 46 125 36 C 125 26 135 18 150 18 C 159 18 167 22 173 28 Z" 
+                fill="url(#v2Cyan)"/>
+
+          <!-- i (lowercase) with wifi waves -->
+          <g>
+            <!-- i stem -->
+            <rect x="187" y="42" width="11" height="36" rx="2" fill="url(#v2Cyan)"/>
+            <!-- i dot -->
+            <circle cx="192.5" cy="33" r="3" fill="#00A8E0"/>
+            <!-- WiFi wave arcs radiating upward from the dot -->
+            <path class="anim-waveA" d="M 185 26 A 9 9 0 0 1 200 26" 
+                  fill="none" stroke="#00A8E0" stroke-width="2.5" stroke-linecap="round"/>
+            <path class="anim-waveB" d="M 180 19 A 15 15 0 0 1 205 19" 
+                  fill="none" stroke="#00A8E0" stroke-width="2.5" stroke-linecap="round"/>
+            <path class="anim-waveC" d="M 175 12 A 21 21 0 0 1 210 12" 
+                  fill="none" stroke="#00A8E0" stroke-width="2.8" stroke-linecap="round"/>
+          </g>
+
+          <!-- T -->
+          <path d="M 216 25 L 216 35 L 228 35 L 228 78 L 240 78 L 240 35 L 252 35 L 252 25 Z" 
+                fill="url(#v2Cyan)"/>
+        </g>
+
+
+        <!-- ==== EMBLEM / CREST ==== -->
+        <!-- The emblem is centered below the text, roughly at cx=258, cy=230 -->
+
+        <!-- LAYER 1: GEAR (right-side, partially behind leaf) -->
+        <g id="gearLayer" class="anim-gear">
+          <!-- 
+            The gear in the original shows about 10-11 visible teeth 
+            wrapping around the right side of the emblem circle.
+            It is a full gear that rotates, but the left part is hidden behind the leaf.
+          -->
+          <path d="
+            M 258 120
+            L 270 120 L 273 132 L 286 136 L 295 128 L 305 133 L 303 146 L 314 153 L 325 149 
+            L 331 158 L 323 168 L 330 179 L 343 180 L 346 191 L 336 198 L 339 210 L 352 214 
+            L 352 226 L 339 230 L 336 242 L 346 249 L 343 260 L 330 261 L 323 272 L 331 282 
+            L 325 291 L 314 287 L 303 294 L 305 307 L 295 312 L 286 304 L 273 308 L 270 320 
+            L 258 320 L 255 308 L 242 304 L 233 312 L 223 307 L 225 294 L 214 287 L 203 291 
+            L 197 282 L 205 272 L 198 261 L 185 260 L 182 249 L 192 242 L 189 230 L 176 226 
+            L 176 214 L 189 210 L 192 198 L 182 191 L 185 180 L 198 179 L 205 168 L 197 158 
+            L 203 149 L 214 153 L 225 146 L 223 133 L 233 128 L 242 136 L 255 132 Z
+          " fill="url(#v2Gear)" stroke="#8B6914" stroke-width="2" stroke-linejoin="round"/>
+          
+          <!-- Inner ring cutout border -->
+          <circle cx="258" cy="220" r="82" fill="none" stroke="#8B6914" stroke-width="2.5"/>
+        </g>
+
+
+        <!-- LAYER 2: INNER BLUE DIGITAL CORE (clipped inside circle) -->
+        <g id="digitalCore" clip-path="url(#v2CoreClip)">
+          <!-- Blue background -->
+          <circle cx="258" cy="230" r="85" fill="url(#v2Blue)"/>
+
+          <!-- SUN with rays (upper area of circle) -->
+          <g id="sunLayer" class="anim-sun">
+            <!-- Sun disk -->
+            <circle cx="250" cy="178" r="28" fill="url(#v2Sun)" stroke="#E65100" stroke-width="1.2"/>
+            <!-- Triangular rays -->
+            <g fill="#FF9E2C" stroke="#E65100" stroke-width="0.8">
+              <polygon points="250,140 246,152 254,152"/>
+              <polygon points="272,146 264,155 270,160"/>
+              <polygon points="284,162 273,167 277,174"/>
+              <polygon points="228,146 230,155 236,155"/>
+              <polygon points="216,162 224,167 220,174"/>
+              <polygon points="250,140 246,152 254,152"/>
+              <polygon points="286,180 274,182 276,189"/>
+            </g>
+          </g>
+
+          <!-- BINARY CODE MATRIX (white text over blue) -->
+          <g id="binaryLayer" class="anim-binary" 
+             font-family="'Courier New', Courier, monospace" 
+             font-weight="bold" font-size="18" fill="white" opacity="0.9">
+            <text x="222" y="195">0  1</text>
+            <text x="210" y="218">1 0 0 1</text>
+            <text x="218" y="241">0  1</text>
+            <text x="210" y="264">1  1  0</text>
+            <text x="218" y="287">1  0</text>
+            <!-- Scrolling duplicates -->
+            <text x="222" y="310">0  1</text>
+            <text x="210" y="333">1 0 0 1</text>
+          </g>
+        </g>
+
+
+        <!-- LAYER 3: GREEN LEAF SWOOSH (left side, overlapping the circle) -->
+        <!-- 
+          The leaf in the original is a large crescent/teardrop shape:
+          - Starts from upper area (around 11 o'clock position)
+          - Swoops down the left side in a wide organic curve
+          - Curves back right at the bottom, forming a pointed tail
+          - Has 3 color bands: dark outer, medium, lime inner
+          - The inner edge of the leaf follows roughly the left arc of the circle
+        -->
+        <g id="leafLayer" class="anim-leaf">
+          <!-- Dark green outer band -->
+          <path d="
+            M 240 105
+            C 210 125 165 175 150 230
+            C 135 285 145 330 175 358
+            Q 195 378 225 370
+            C 210 350 200 320 200 290
+            C 200 240 220 200 248 170
+            C 242 155 238 135 240 105 Z
+          " fill="url(#v2LeafDk)" stroke="#0A3E12" stroke-width="1.5"/>
+          
+          <!-- Medium green band -->
+          <path d="
+            M 240 105
+            C 215 135 175 185 162 235
+            C 149 285 158 328 185 355
+            Q 200 370 220 368
+            C 210 348 205 320 208 285
+            C 212 240 230 198 248 170
+            C 244 150 240 130 240 105 Z
+          " fill="url(#v2LeafMd)" stroke="#1B6D2D" stroke-width="1.2"/>
+          
+          <!-- Lime/light green inner band -->
+          <path d="
+            M 240 108
+            C 222 142 190 195 180 242
+            C 170 290 178 332 200 358
+            Q 212 370 230 365
+            C 220 348 216 320 218 285
+            C 222 240 238 200 248 170
+            C 245 152 242 132 240 108 Z
+          " fill="url(#v2LeafLt)" stroke="#558B2F" stroke-width="1"/>
+        </g>
+
+
+        <!-- LAYER 4: ATOMIC ORBIT ELLIPSE -->
+        <!-- 
+          A tilted elliptical track going from lower-left to upper-right,
+          wrapping around the entire emblem. In the original it passes:
+          - Behind the leaf at the top-left
+          - In front at the bottom
+          - Up and over the gear on the right
+          The track is dark (navy/black) with a slight highlight
+        -->
+        <g id="orbitLayer">
+          <path id="orbitPath" 
+                d="M 120 330 C 80 370 60 350 100 300 C 155 225 270 130 380 115 C 430 108 445 140 410 190 C 350 275 180 370 120 330 Z" 
+                fill="none" stroke="#1a1a3e" stroke-width="4" stroke-linecap="round"/>
+          <!-- Subtle inner highlight -->
+          <path d="M 120 330 C 80 370 60 350 100 300 C 155 225 270 130 380 115 C 430 108 445 140 410 190 C 350 275 180 370 120 330 Z" 
+                fill="none" stroke="#3F51B5" stroke-width="1" opacity="0.25"/>
+          
+          <!-- Orbiting electron sphere -->
+          <circle class="anim-electron" r="11" fill="#0D1B2A" stroke="#1a1a3e" stroke-width="3"/>
+        </g>
+
+      </svg>
+    </div>
+  </div>
+
+  <!-- Dark BG version -->
+  <div class="panel vector">
+    <h3>Vector Reconstruction (Dark BG)</h3>
+    <div class="bg-dark">
+      <svg viewBox="0 0 480 420" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="v2CyanD" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#00A8E0"/>
+            <stop offset="100%" stop-color="#0077B5"/>
+          </linearGradient>
+          <linearGradient id="v2GearD" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#D4A84B"/>
+            <stop offset="40%" stop-color="#C49435"/>
+            <stop offset="100%" stop-color="#A07828"/>
+          </linearGradient>
+          <radialGradient id="v2SunD" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FF9E2C"/>
+            <stop offset="60%" stop-color="#F57C00"/>
+            <stop offset="100%" stop-color="#E65100"/>
+          </radialGradient>
+          <linearGradient id="v2BlueD" x1="0" y1="0" x2="0.5" y2="1">
+            <stop offset="0%" stop-color="#1565C0"/>
+            <stop offset="100%" stop-color="#0D47A1"/>
+          </linearGradient>
+          <linearGradient id="v2LeafDkD" x1="0.3" y1="0" x2="0.7" y2="1">
+            <stop offset="0%" stop-color="#1B5E20"/>
+            <stop offset="100%" stop-color="#0D3B12"/>
+          </linearGradient>
+          <linearGradient id="v2LeafMdD" x1="0.3" y1="0" x2="0.7" y2="1">
+            <stop offset="0%" stop-color="#43A047"/>
+            <stop offset="100%" stop-color="#2E7D32"/>
+          </linearGradient>
+          <linearGradient id="v2LeafLtD" x1="0.2" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stop-color="#C0CA33"/>
+            <stop offset="50%" stop-color="#8BC34A"/>
+            <stop offset="100%" stop-color="#689F38"/>
+          </linearGradient>
+          <clipPath id="v2CoreClipD">
+            <circle cx="258" cy="230" r="85"/>
+          </clipPath>
+        </defs>
+
+        <g id="textGroupD">
+          <path d="M 30 22 L 30 78 L 56 78 C 74 78 86 66 86 50 C 86 34 74 22 56 22 Z M 42 33 L 54 33 C 67 33 74 40 74 50 C 74 60 67 67 54 67 L 42 67 Z" fill="url(#v2CyanD)"/>
+          <path d="M 112 22 C 95 22 85 34 85 50 C 85 66 95 78 112 78 C 129 78 139 66 139 50 C 139 34 129 22 112 22 Z M 112 33 C 122 33 127 40 127 50 C 127 60 122 67 112 67 C 102 67 97 60 97 50 C 97 40 102 33 112 33 Z" fill="url(#v2CyanD)"/>
+          <path d="M 170 33 C 166 27 159 22 150 22 C 140 22 133 28 133 36 C 133 44 140 48 151 51 L 155 52 C 168 56 175 61 175 71 C 175 81 165 86 153 86 C 143 86 134 82 128 74 L 136 66 C 140 72 147 75 153 75 C 160 75 165 72 165 67 C 165 62 159 59 149 56 L 145 55 C 132 51 125 46 125 36 C 125 26 135 18 150 18 C 159 18 167 22 173 28 Z" fill="url(#v2CyanD)"/>
+          <g>
+            <rect x="187" y="42" width="11" height="36" rx="2" fill="url(#v2CyanD)"/>
+            <circle cx="192.5" cy="33" r="3" fill="#00A8E0"/>
+            <path class="anim-waveA" d="M 185 26 A 9 9 0 0 1 200 26" fill="none" stroke="#00A8E0" stroke-width="2.5" stroke-linecap="round"/>
+            <path class="anim-waveB" d="M 180 19 A 15 15 0 0 1 205 19" fill="none" stroke="#00A8E0" stroke-width="2.5" stroke-linecap="round"/>
+            <path class="anim-waveC" d="M 175 12 A 21 21 0 0 1 210 12" fill="none" stroke="#00A8E0" stroke-width="2.8" stroke-linecap="round"/>
+          </g>
+          <path d="M 216 25 L 216 35 L 228 35 L 228 78 L 240 78 L 240 35 L 252 35 L 252 25 Z" fill="url(#v2CyanD)"/>
+        </g>
+
+        <g id="gearLayerD" class="anim-gear">
+          <path d="
+            M 258 120 L 270 120 L 273 132 L 286 136 L 295 128 L 305 133 L 303 146 L 314 153 L 325 149 L 331 158 L 323 168 L 330 179 L 343 180 L 346 191 L 336 198 L 339 210 L 352 214 L 352 226 L 339 230 L 336 242 L 346 249 L 343 260 L 330 261 L 323 272 L 331 282 L 325 291 L 314 287 L 303 294 L 305 307 L 295 312 L 286 304 L 273 308 L 270 320 L 258 320 L 255 308 L 242 304 L 233 312 L 223 307 L 225 294 L 214 287 L 203 291 L 197 282 L 205 272 L 198 261 L 185 260 L 182 249 L 192 242 L 189 230 L 176 226 L 176 214 L 189 210 L 192 198 L 182 191 L 185 180 L 198 179 L 205 168 L 197 158 L 203 149 L 214 153 L 225 146 L 223 133 L 233 128 L 242 136 L 255 132 Z
+          " fill="url(#v2GearD)" stroke="#8B6914" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="258" cy="220" r="82" fill="none" stroke="#8B6914" stroke-width="2.5"/>
+        </g>
+
+        <g id="digitalCoreD" clip-path="url(#v2CoreClipD)">
+          <circle cx="258" cy="230" r="85" fill="url(#v2BlueD)"/>
+          <g id="sunLayerD" class="anim-sun">
+            <circle cx="250" cy="178" r="28" fill="url(#v2SunD)" stroke="#E65100" stroke-width="1.2"/>
+            <g fill="#FF9E2C" stroke="#E65100" stroke-width="0.8">
+              <polygon points="250,140 246,152 254,152"/>
+              <polygon points="272,146 264,155 270,160"/>
+              <polygon points="284,162 273,167 277,174"/>
+              <polygon points="228,146 230,155 236,155"/>
+              <polygon points="216,162 224,167 220,174"/>
+              <polygon points="286,180 274,182 276,189"/>
+            </g>
+          </g>
+          <g id="binaryLayerD" class="anim-binary" font-family="'Courier New', Courier, monospace" font-weight="bold" font-size="18" fill="white" opacity="0.9">
+            <text x="222" y="195">0  1</text>
+            <text x="210" y="218">1 0 0 1</text>
+            <text x="218" y="241">0  1</text>
+            <text x="210" y="264">1  1  0</text>
+            <text x="218" y="287">1  0</text>
+            <text x="222" y="310">0  1</text>
+            <text x="210" y="333">1 0 0 1</text>
+          </g>
+        </g>
+
+        <g id="leafLayerD" class="anim-leaf">
+          <path d="M 240 105 C 210 125 165 175 150 230 C 135 285 145 330 175 358 Q 195 378 225 370 C 210 350 200 320 200 290 C 200 240 220 200 248 170 C 242 155 238 135 240 105 Z" fill="url(#v2LeafDkD)" stroke="#0A3E12" stroke-width="1.5"/>
+          <path d="M 240 105 C 215 135 175 185 162 235 C 149 285 158 328 185 355 Q 200 370 220 368 C 210 348 205 320 208 285 C 212 240 230 198 248 170 C 244 150 240 130 240 105 Z" fill="url(#v2LeafMdD)" stroke="#1B6D2D" stroke-width="1.2"/>
+          <path d="M 240 108 C 222 142 190 195 180 242 C 170 290 178 332 200 358 Q 212 370 230 365 C 220 348 216 320 218 285 C 222 240 238 200 248 170 C 245 152 242 132 240 108 Z" fill="url(#v2LeafLtD)" stroke="#558B2F" stroke-width="1"/>
+        </g>
+
+        <g id="orbitLayerD">
+          <path d="M 120 330 C 80 370 60 350 100 300 C 155 225 270 130 380 115 C 430 108 445 140 410 190 C 350 275 180 370 120 330 Z" fill="none" stroke="#1a1a3e" stroke-width="4" stroke-linecap="round"/>
+          <path d="M 120 330 C 80 370 60 350 100 300 C 155 225 270 130 380 115 C 430 108 445 140 410 190 C 350 275 180 370 120 330 Z" fill="none" stroke="#5C6BC0" stroke-width="1" opacity="0.3"/>
+          <circle class="anim-electron" r="11" fill="#0D1B2A" stroke="#1a1a3e" stroke-width="3"/>
+        </g>
+      </svg>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

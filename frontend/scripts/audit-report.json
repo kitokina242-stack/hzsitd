@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-10-18T05:19:20.965Z",
+  "environment": {
+    "browser": "Google Chrome (Headless)",
+    "portalUrl": "http://localhost:3000",
+    "backendUrl": "http://localhost:8000"
+  },
+  "apiHealth": [
+    {
+      "endpoint": "/api/letters",
+      "status": "PASS",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "/api/stats",
+      "status": "PASS",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "/api/directories",
+      "status": "PASS",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "/api/users?role=Officer",
+      "status": "PASS",
+      "statusCode": 200
+    },
+    {
+      "endpoint": "/api/letters/track?ref=HZSITD/OUT/2026/039",
+      "status": "PASS",
+      "statusCode": 200
+    }
+  ],
+  "browserErrors": [],
+  "networkFailures": [],
+  "navigationChecks": [
+    {
+      "target": "Dashboard Overview",
+      "status": "PASS"
+    },
+    {
+      "target": "Ministerial Inbound",
+      "status": "PASS"
+    },
+    {
+      "target": "Official Outbound",
+      "status": "PASS"
+    },
+    {
+      "target": "Archived Records",
+      "status": "PASS"
+    },
+    {
+      "target": "Executive Endorsements",
+      "status": "PASS"
+    },
+    {
+      "target": "Audit Trail",
+      "status": "PASS"
+    },
+    {
+      "target": "Staff Directory",
+      "status": "PASS"
+    }
+  ],
+  "roleSwitchingChecks": [
+    {
+      "role": "Directory Lead",
+      "status": "PASS"
+    },
+    {
+      "role": "Officer",
+      "status": "PASS"
+    },
+    {
+      "role": "System Admin",
+      "status": "PASS"
+    },
+    {
+      "role": "Department Head",
+      "status": "PASS"
+    }
+  ],
+  "modalChecks": [
+    {
+      "modal": "ComposeModal",
+      "status": "PASS"
+    }
+  ],
+  "verificationPageCheck": "PASS",
+  "themeAndStylingAudit": [],
+  "summary": {
+    "totalTests": 26,
+    "passed": 25,
+    "failed": 0,
+    "warnings": 1
+  }
+}

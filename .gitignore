@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+*/node_modules/
+frontend/node_modules/
+HZSITD/node_modules/
+
+# Next.js & Build Outputs
+.next/
+*/.next/
+frontend/.next/
+out/
+build/
+dist/
+
+# Database temporary files & SQLite locks
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+
+# Environment & local configurations
+.env*
+.vercel/
+
+# Tooling & Assistant cache
+.agents/
+
+# Logs & OS artifacts
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+next-env.d.ts

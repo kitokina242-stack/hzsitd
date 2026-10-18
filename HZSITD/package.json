@@ -1,0 +1,16 @@
+{
+  "name": "hzsitd-portal",
+  "version": "1.0.0",
+  "description": "Hadiya Zone Science & Information Technology Department — Official Paperless Letter Portal",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "seed": "node backend/seed.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.1",
+    "socket.io": "^4.8.4"
+  }
+}

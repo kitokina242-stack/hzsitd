@@ -1,0 +1,506 @@
+/* ===================================================================
+   HZSITD — Intro Loader Overlay Styles
+   =================================================================== */
+
+/* ----- Custom Fonts ----- */
+@font-face {
+  font-family: 'Elegant';
+  src: url('../english font/ELEGANT  Personal use.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'LogaDisplay';
+  src: url('../amharic font/Font.et - Loga Display Med - Unknown Designer/Loga_Display_Medium_2eb4372171.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'ScienceIcons';
+  src: url('../science/science.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Technopath';
+  src: url('../technopath/Technopath.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'Glorious';
+  src: url('../glorious_3/GLORIOUS.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'ScienceAndFiction';
+  src: url('../science_and_fiction/ScienceAndFiction.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: 'ScienceAndFiction';
+  src: url('../science_and_fiction/ScienceAndFiction-Bold.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: block;
+}
+
+/* ----- Global Font Smoothing & Legibility ----- */
+html, body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ----- Body Lock ----- */
+body.intro-active {
+  overflow: hidden !important;
+}
+
+/* ----- Full-screen Overlay ----- */
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  will-change: opacity;
+}
+
+#intro-overlay.fade-out {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ----- Centered Group (logo + text) in Intro Loader ----- */
+#intro-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+/* ----- Logo Container ----- */
+#intro-logo-wrap {
+  width: auto;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translateY(35px);
+}
+
+#intro-logo-wrap svg {
+  height: 140px;
+  width: auto;
+  display: block;
+  overflow: visible;
+}
+
+/* ----- Text Area ----- */
+#intro-text-area {
+  position: relative;
+  min-height: 2.8em;
+  flex-shrink: 0;
+}
+
+.intro-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: max-content;
+}
+
+#intro-am {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.intro-line-mask {
+  overflow: hidden;
+  line-height: 1.35;
+}
+
+.intro-line {
+  display: block;
+  white-space: nowrap;
+  padding: 0.06em 0.25em 0.06em 0;
+}
+
+/* Initial state — hidden at center divider */
+.intro-line-mask.top .intro-line {
+  transform: translateY(115%);
+}
+
+.intro-line-mask.bottom .intro-line {
+  transform: translateY(-115%);
+}
+
+.intro-line-en {
+  font-family: 'Elegant', 'Georgia', serif;
+  font-size: 23px;
+  color: #111111;
+  letter-spacing: 0.035em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.intro-line-am {
+  font-family: 'LogaDisplay', 'Nyala', sans-serif;
+  font-size: 23px;
+  color: #111111;
+  letter-spacing: 0.01em;
+  padding-right: 0.35em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ----- Responsive ----- */
+@media (max-width: 640px) {
+  #intro-group {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  #intro-logo-wrap {
+    width: clamp(60px, 28vw, 110px);
+  }
+  .intro-text-group {
+    align-items: center;
+    width: auto;
+  }
+  .intro-line {
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* ----- Hide old HZSITD legacy logos immediately ----- */
+.header .logo .logo-white,
+.header .logo .logo-dark {
+  display: none !important;
+}
+
+/* ----- Animated logo + animated text persisted in site header after intro ----- */
+.logo .header-intro-logo {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  text-decoration: none !important;
+}
+.logo .header-intro-logo:hover {
+  text-decoration: none !important;
+}
+.logo .header-intro-logo #intro-logo-wrap {
+  width: auto !important;
+  opacity: 1 !important;
+  transform: none !important;
+  flex-shrink: 0;
+}
+.logo .header-intro-logo svg {
+  width: auto !important;
+  height: 92px !important;
+  display: block;
+  overflow: visible;
+}
+.logo .header-intro-logo #intro-text-area {
+  position: relative !important;
+  min-height: 2.7em !important;
+  flex-shrink: 0;
+}
+.logo .header-intro-logo .intro-line-mask {
+  overflow: hidden;
+  line-height: 1.35;
+}
+.logo .header-intro-logo .intro-line-en {
+  font-family: 'Elegant', 'Georgia', serif;
+  font-size: 15px !important;
+  color: #111111 !important;
+  letter-spacing: 0.03em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+.logo .header-intro-logo .intro-line-am {
+  font-family: 'LogaDisplay', 'Nyala', sans-serif;
+  font-size: 15px !important;
+  color: #111111 !important;
+  letter-spacing: 0.01em;
+  padding-right: 0.35em !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+@media (max-width: 640px) {
+  .logo .header-intro-logo svg {
+    height: 60px !important;
+  }
+  .logo .header-intro-logo #intro-text-area {
+    display: none !important;
+  }
+}
+
+/* Clear banner dark overlay so white bg vid remains clean and bright */
+.banner-section::before {
+  background-color: transparent !important;
+}
+
+/* ===================================================================
+   Hero Section — Full-Width Stacked Headline
+   =================================================================== */
+.hero-headline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  line-height: 1;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.hero-line-wrap {
+  overflow: hidden;
+  display: block;
+  width: 100%;
+}
+
+/* Line 3: TECHNOLOGY DEPT. — largest, anchored to bottom-left */
+.hero-headline-line.line-3 {
+  font-size: clamp(48px, 9.2vw, 132px);
+  color: #111111;
+  letter-spacing: -0.02em;
+  line-height: 0.88 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: nowrap;
+  transform: translateX(120%);
+  opacity: 0;
+  transition: transform 1.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0.16s;
+}
+
+/* Line 2: INFORMATION — placed above it (equal size to Technology) */
+.hero-headline-line.line-2 {
+  font-size: clamp(48px, 9.2vw, 132px);
+  color: #111111 !important;
+  letter-spacing: 0.05em;
+  line-height: 0.95;
+  margin: 0 0 0.05em 0;
+  white-space: nowrap;
+  transform: translateX(120%);
+  opacity: 0;
+  transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: 0.08s;
+}
+
+/* Line 1: Hadiya Zone Science & — ScienceAndFiction font */
+.hero-headline-line.line-1 {
+  font-family: 'ScienceAndFiction', 'Glorious', sans-serif;
+  font-size: clamp(34px, 6.8vw, 98px);
+  color: #111111;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  margin: 0 0 0.08em 0;
+  white-space: nowrap;
+  transform: translateX(-120%);
+  opacity: 0;
+  transition: transform 1.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Revealed State */
+.hero-revealed .hero-headline-line.line-1,
+.hero-revealed .hero-headline-line.line-2,
+.hero-revealed .hero-headline-line.line-3 {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Atom Icon on letter 'i' of Science */
+.hero-atom-icon {
+  font-family: 'ScienceIcons' !important;
+  color: #359604;
+  display: inline-block;
+  vertical-align: middle;
+  margin: 0 -0.04em;
+  font-size: 1.05em;
+  font-style: normal;
+  text-shadow: 0 0 16px rgba(53, 150, 4, 0.35);
+}
+
+/* Ampersand fallback */
+.hero-amp {
+  font-family: 'Glorious', 'Georgia', serif;
+  display: inline-block;
+}
+
+/* Technopath font for "Information" — reverted to black */
+.hero-tech-words {
+  font-family: 'Technopath', monospace !important;
+  color: #111111 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: none !important;
+}
+
+/* "Technology" in Technopath — reverted to black */
+.hero-tech-word-tech {
+  font-family: 'Technopath', monospace !important;
+  color: #111111 !important;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  text-shadow: none !important;
+}
+
+/* "Dept." in ScienceAndFiction — half the size of Technology */
+.hero-dept-word {
+  font-family: 'ScienceAndFiction', 'Glorious', sans-serif;
+  font-size: 0.5em !important;
+  color: #111111;
+  display: inline-block;
+  vertical-align: baseline;
+  margin-left: 0.15em;
+  letter-spacing: 0.02em;
+}
+
+/* Hero bottom alignment — text sits right at the very bottom edge */
+.banner-section .hero-text-bottom-wrap {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.banner-section .container-fluid {
+  padding-bottom: 0 !important;
+}
+
+/* ===================================================================
+   Header — White that fades down (replaces lime green)
+   =================================================================== */
+.header {
+  border-top: none !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.78) 45%, rgba(255, 255, 255, 0) 100%) !important;
+  box-shadow: none !important;
+}
+
+.header.fixed-header {
+  border-top: none !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.88) 55%, rgba(255, 255, 255, 0) 100%) !important;
+  box-shadow: none !important;
+}
+
+/* ===================================================================
+   Custom Hamburger Menu — Two Wide Black Lines, No Circle/Background
+   =================================================================== */
+.toggle-menu.custom-hamburger-btn {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 8px 0 !important;
+  width: auto !important;
+  height: auto !important;
+  cursor: pointer;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+  gap: 7px !important;
+  outline: none !important;
+}
+
+.toggle-menu.custom-hamburger-btn:hover,
+.toggle-menu.custom-hamburger-btn:focus,
+.toggle-menu.custom-hamburger-btn:active,
+.header.fixed-header .toggle-menu.custom-hamburger-btn {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.toggle-menu.custom-hamburger-btn .hamburger-line {
+  display: block !important;
+  width: 36px !important;
+  height: 3px !important;
+  background-color: #111111 !important;
+  border-radius: 2px !important;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* ===================================================================
+   3D Object (bezabih.glb) — Hero & Footer Right Side
+   =================================================================== */
+
+/* Shared 3D wrapper: right side (shifted by 1 letter width to -11vw),
+   completely starts appearing from the very bottom (translateY 100%) */
+.scene-3d-wrap {
+  position: absolute;
+  right: -11vw;
+  bottom: 0 !important;
+  height: 75vh;
+  width: 50vw;
+  max-width: 680px;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 3.5s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 3.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scene-3d-wrap.appeared {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scene-3d-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+/* Footer-specific: right side, bottom-anchored, semi-transparent blend */
+.footer .scene-3d-wrap {
+  opacity: 0;
+  z-index: 1;
+  right: -5vw;
+}
+.footer .scene-3d-wrap.appeared {
+  opacity: 0.75;
+}
+
+@media (max-width: 991.98px) {
+  .scene-3d-wrap {
+    height: 52vh;
+    right: -16vw;
+    width: 65vw;
+  }
+}
+@media (max-width: 640px) {
+  .scene-3d-wrap {
+    height: 42vh;
+    right: -22vw;
+    width: 75vw;
+  }
+}

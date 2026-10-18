@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>3D Alignment Test</title>
+  <style>
+    body { margin: 0; background: #222; overflow-x: hidden; min-height: 200vh; }
+    .hero-mock {
+      position: relative;
+      height: 100vh;
+      background: #f0f0f0;
+      overflow: hidden;
+      border-bottom: 4px solid red; /* To visualize bottom edge */
+    }
+    .footer-mock {
+      position: relative;
+      height: 60vh;
+      margin-top: 50vh;
+      background: #111;
+      overflow: hidden;
+      border-bottom: 4px solid blue;
+    }
+    .scene-3d-wrap {
+      position: absolute;
+      right: -8vw;
+      bottom: 0;
+      height: 75vh;
+      width: 50vw;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .scene-3d-wrap canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="hero-mock">
+    <div style="padding: 40px; font-size: 24px;">HERO SECTION</div>
+    <div class="scene-3d-wrap" id="hero-wrap">
+      <canvas id="hero-c"></canvas>
+    </div>
+  </div>
+
+  <div class="footer-mock">
+    <div style="padding: 40px; font-size: 24px; color: white;">FOOTER SECTION</div>
+    <div class="scene-3d-wrap" id="footer-wrap">
+      <canvas id="footer-c"></canvas>
+    </div>
+  </div>
+
+  <script src="../assets/libs/three/three.min.js"></script>
+  <script src="../assets/libs/three/GLTFLoader.js"></script>
+  <script>
+    function setupViewer(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const rect = canvas.getBoundingClientRect();
+      const w = canvas.parentElement.clientWidth;
+      const h = canvas.parentElement.clientHeight;
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+      camera.position.set(0, 0, 4);
+
+      // Lights
+      scene.add(new THREE.AmbientLight(0xffffff, 1.4));
+      const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+      dirLight.position.set(5, 8, 5);
+      scene.add(dirLight);
+
+      const limeLight = new THREE.DirectionalLight(0xc1ff72, 1.2);
+      limeLight.position.set(-5, -2, -2);
+      scene.add(limeLight);
+
+      return { renderer, scene, camera, canvas };
+    }
+
+    const hero = setupViewer('hero-c');
+    const footer = setupViewer('footer-c');
+
+    const loader = new THREE.GLTFLoader();
+    loader.load('../assets/bezabih.glb', function(gltf) {
+      console.log('Model loaded!');
+      const base = gltf.scene;
+
+      // Compute bounding box
+      const box = new THREE.Box3().setFromObject(base);
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      
+      // We want model height in Three.js units
+      // At camera z=4, FOV=45, visible height is:
+      // 2 * Math.tan((45/2) * Math.PI / 180) * 4 = 3.3137
+      const visibleHeight = 2 * Math.tan((45 / 2) * Math.PI / 180) * 4;
+      
+      // Fill ~95% of visible height so it fills the 75vh canvas nicely
+      const targetHeight = visibleHeight * 0.95;
+      const scale = targetHeight / size.y;
+      base.scale.setScalar(scale);
+
+      // We want the BOTTOM of the model (min.y * scale) to align exactly with
+      // the bottom of the camera frustum: -visibleHeight / 2
+      // So model.position.y = -visibleHeight / 2 - (box.min.y * scale);
+      const bottomY = -visibleHeight / 2 - (box.min.y * scale);
+      // Center X and Z
+      const centerX = -(box.min.x + box.max.x) / 2 * scale;
+      const centerZ = -(box.min.z + box.max.z) / 2 * scale;
+
+      base.position.set(centerX, bottomY, centerZ);
+
+      // Add to hero
+      const heroGroup = new THREE.Group();
+      heroGroup.add(base);
+      hero.scene.add(heroGroup);
+
+      // Clone for footer
+      const footerBase = base.clone(true);
+      const footerGroup = new THREE.Group();
+      footerGroup.add(footerBase);
+      footer.scene.add(footerGroup);
+
+      function loop() {
+        requestAnimationFrame(loop);
+        heroGroup.rotation.y += 0.008;
+        footerGroup.rotation.y += 0.008;
+        hero.renderer.render(hero.scene, hero.camera);
+        footer.renderer.render(footer.scene, footer.camera);
+      }
+      loop();
+    }, undefined, function(err) {
+      console.error('GLTF load error:', err);
+    });
+  </script>
+</body>
+</html>

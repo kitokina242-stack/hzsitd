@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HZSITD Loader Logo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent !important;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      overflow: visible;
+    }
+  </style>
+</head>
+<body>
+  <!-- The exact SVG from assets/loader/index.html -->
+  <svg id="intro-svg" viewBox="0 0 1024 703" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+    <defs>
+      <linearGradient id="gearGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#bb8a12"/>
+        <stop offset="1" stop-color="#ac7c10"/>
+      </linearGradient>
+      <linearGradient id="blueGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2178d8"/>
+        <stop offset="1" stop-color="#1769c6"/>
+      </linearGradient>
+      <radialGradient id="ballGrad" cx="0.36" cy="0.32" r="0.8">
+        <stop offset="0" stop-color="#505050"/>
+        <stop offset="0.4" stop-color="#171717"/>
+        <stop offset="1" stop-color="#000"/>
+      </radialGradient>
+
+      <clipPath id="blueClip"><path class="blueD"/></clipPath>
+      <clipPath id="greenClip"><path class="greenD"/></clipPath>
+      <clipPath id="gearClip"><path id="gearClipPath"/></clipPath>
+    </defs>
+
+    <!-- ===== DOSIT wordmark (cap height 62-165) ===== -->
+    <g fill="#0e9be6">
+      <!-- D -->
+      <path fill-rule="evenodd" d="M5 62 H58 A52 51.5 0 0 1 58 165 H5 Z M30 87 V140 H58 A27 26.5 0 0 0 58 87 Z"/>
+      <!-- O -->
+      <path fill-rule="evenodd" d="M117 113.5 a52 52 0 1 0 104 0 a52 52 0 1 0 -104 0 Z M145 113.5 a24 26 0 1 0 48 0 a24 26 0 1 0 -48 0 Z"/>
+      <!-- S -->
+      <path d="M318 74.5 H258 A19.5 19.5 0 0 0 258 113.5 H292 A19.5 19.5 0 0 1 292 152.5 H232" fill="none" stroke="#0e9be6" stroke-width="25"/>
+      <!-- I with signal dot -->
+      <rect x="330" y="78" width="26" height="87"/>
+      <circle cx="343" cy="51" r="11.5"/>
+      <g id="wifi" fill="none" stroke="#0e9be6" stroke-width="6" stroke-linecap="round"></g>
+      <!-- T with slanted bar ends -->
+      <path d="M365 62 H478 L462 88 H434 V165 H409 V88 H381 Z"/>
+    </g>
+
+    <!-- back half of the orbit ring (behind gear and globe) -->
+    <path id="ringBack" fill="#0d0d0d" stroke="#0d0d0d" stroke-width=".5" stroke-linejoin="round"/>
+    <g id="backLayer"></g>
+
+    <!-- gear + sun -->
+    <g clip-path="url(#gearClip)">
+      <g>
+        <animateTransform id="gearSpin" attributeName="transform" type="rotate" from="0 577 375" to="360 577 375" dur="16s" repeatCount="indefinite"/>
+        <path id="gearPath" fill="url(#gearGrad)"/>
+      </g>
+      <circle id="gearHole" cx="577" cy="375" r="205" fill="#ffffff"/>
+      <g>
+        <animateTransform id="sunSpin" attributeName="transform" type="rotate" from="0 600 352" to="-360 600 352" dur="12s" repeatCount="indefinite"/>
+        <path id="sunPath" fill="#ff9d0a"/>
+      </g>
+    </g>
+
+    <!-- globe -->
+    <path class="blueD" fill="url(#blueGrad)"/>
+    <g clip-path="url(#blueClip)">
+      <g id="digits" font-family="'Arial Black', Arial, Helvetica, sans-serif" font-weight="900" font-size="42" fill="#fff" text-anchor="middle" text-rendering="geometricPrecision"></g>
+    </g>
+    <path class="greenD" fill="#8ed100"/>
+    <g clip-path="url(#greenClip)">
+      <!-- concentric circular ripples, rebuilt every frame by updateWaves() -->
+      <g id="waves"></g>
+    </g>
+    <g fill="none" stroke="#111" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+      <path id="outlineOuter"/>
+      <path id="outlineC1"/>
+      <path id="outlineC2"/>
+    </g>
+
+    <!-- front half of the orbit ring + ball -->
+    <path id="ringFront" fill="#0d0d0d" stroke="#0d0d0d" stroke-width=".5" stroke-linejoin="round"/>
+    <g id="frontLayer"></g>
+
+    <g id="ball">
+      <circle r="46" fill="url(#ballGrad)"/>
+      <path d="M-31 -13 A33 33 0 0 1 -10 -31" fill="none" stroke="#fff" stroke-opacity=".8" stroke-width="5" stroke-linecap="round"/>
+    </g>
+  </svg>
+
+  <script>
+    const NS = 'http://www.w3.org/2000/svg';
+    const $ = (id) => document.getElementById(id);
+    const rand = (n) => Math.floor(Math.random() * n);
+
+    const rad = (d) => d * Math.PI / 180;
+    const fmt = (p) => p[0].toFixed(2) + ' ' + p[1].toFixed(2);
+
+    const GX = 547, GY = 405, GR = 265;
+    const globePt = (r, deg) => [GX + r * Math.cos(rad(deg)), GY + r * Math.sin(rad(deg))];
+
+    const A_T = -105, A_U = 63;
+    const T = globePt(GR, A_T), U = globePt(GR, A_U);
+
+    const R = 255;
+    const TOOTH_H = 28;
+    const SUN_DX = 23, SUN_DY = -23;
+    const [CX, CY] = (function gearCentre() {
+      const mx = (T[0] + U[0]) / 2, my = (T[1] + U[1]) / 2;
+      const dx = U[0] - T[0], dy = U[1] - T[1], len = Math.hypot(dx, dy);
+      const px = dy / len, py = -dx / len;
+      const s = (577 - mx) * px + (375 - my) * py;
+      return [mx + px * s, my + py * s];
+    })();
+
+    $('gearSpin').setAttribute('from', `0 ${CX.toFixed(2)} ${CY.toFixed(2)}`);
+    $('gearSpin').setAttribute('to', `360 ${CX.toFixed(2)} ${CY.toFixed(2)}`);
+    $('sunSpin').setAttribute('from', `0 ${(CX + SUN_DX).toFixed(2)} ${(CY + SUN_DY).toFixed(2)}`);
+    $('sunSpin').setAttribute('to', `-360 ${(CX + SUN_DX).toFixed(2)} ${(CY + SUN_DY).toFixed(2)}`);
+    $('gearHole').setAttribute('cx', CX.toFixed(2));
+    $('gearHole').setAttribute('cy', CY.toFixed(2));
+
+    function splinePath(pts) {
+      const n = pts.length;
+      let d = '';
+      for (let i = 0; i < n - 1; i++) {
+        const p1 = pts[i], p2 = pts[i + 1];
+        const p0 = i > 0 ? pts[i - 1] : [2 * p1[0] - p2[0], 2 * p1[1] - p2[1]];
+        const p3 = i < n - 2 ? pts[i + 2] : [2 * p2[0] - p1[0], 2 * p2[1] - p1[1]];
+        const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+        const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+        d += 'C' + fmt(c1) + ' ' + fmt(c2) + ' ' + fmt(p2) + ' ';
+      }
+      return d;
+    }
+
+    const C1pts = [T, [459.5, 200], [471, 252], [507, 305], [560, 355], [619, 391], [673, 412], [716, 436],
+                   [742, 480], [747, 523], [737, 566], [710, 606], U];
+    const C2pts = [T, [421.8, 204], [391.7, 255], [386.5, 302], [405, 345], [443, 386], [488, 420], [538, 450],
+                   [590, 480], [630, 511], [665, 555], [682, 602], U];
+
+    const C1 = splinePath(C1pts);
+    const C2fwd = splinePath(C2pts);
+    const C2rev = splinePath(C2pts.slice().reverse());
+
+    const OUTER = 'A' + GR + ' ' + GR + ' 0 1 1 ' + fmt(T);
+
+    const blueD = 'M' + fmt(T) + ' ' + C1 + ' ' + C2rev + 'Z';
+    const greenD = 'M' + fmt(T) + ' ' + C2fwd + ' ' + OUTER + ' Z';
+
+    document.querySelectorAll('.blueD').forEach(p => p.setAttribute('d', blueD));
+    document.querySelectorAll('.greenD').forEach(p => p.setAttribute('d', greenD));
+    $('outlineOuter').setAttribute('d', 'M' + fmt(U) + ' ' + OUTER);
+    $('outlineC1').setAttribute('d', 'M' + fmt(T) + ' ' + C1);
+    $('outlineC2').setAttribute('d', 'M' + fmt(T) + ' ' + C2fwd);
+
+    (function buildGearClip() {
+      const top = globePt(420, A_T), bot = globePt(420, A_U);
+      $('gearClipPath').setAttribute('d',
+        'M' + fmt(top) + ' L' + fmt(T) + ' ' + C1 + ' L' + fmt(bot) +
+        ' L1100 800 L1100 -100 L' + top[0].toFixed(2) + ' -100 Z');
+    })();
+
+    (function buildGear() {
+      const rootR = R, tipR = R + TOOTH_H, teeth = 12;
+      const pitch = rad(360 / teeth), baseHalf = rad(10.5), tipHalf = rad(8);
+      const first = rad(-101);
+      const pt = (r, a) => (CX + r * Math.cos(a)).toFixed(2) + ' ' + (CY + r * Math.sin(a)).toFixed(2);
+      let d = 'M' + pt(rootR, first - baseHalf) + ' ';
+      for (let i = 0; i < teeth; i++) {
+        const a = first + i * pitch;
+        d += 'L' + pt(tipR, a - tipHalf) +
+             ' A' + tipR + ' ' + tipR + ' 0 0 1 ' + pt(tipR, a + tipHalf) +
+             ' L' + pt(rootR, a + baseHalf) +
+             ' A' + rootR + ' ' + rootR + ' 0 0 1 ' + pt(rootR, a + pitch - baseHalf) + ' ';
+      }
+      $('gearPath').setAttribute('d', d + 'Z');
+    })();
+
+    (function buildSun() {
+      const cx = CX + SUN_DX, cy = CY + SUN_DY, spikes = 12, tipR = 118, baseR = 72;
+      const half = (Math.PI / spikes) / 2;
+      const pt = (r, a) => (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2);
+      let d = '';
+      for (let i = 0; i < spikes; i++) {
+        const a = i * 2 * Math.PI / spikes - Math.PI / 2;
+        d += (i ? 'L' : 'M') + pt(baseR, a - half) + ' L' + pt(tipR, a) + ' L' + pt(baseR, a + half) + ' ';
+      }
+      $('sunPath').setAttribute('d', d + 'Z');
+    })();
+
+    (function buildWifi() {
+      const cx = 343, cy = 51;
+      [21, 33, 45].forEach((r, i) => {
+        const k = r * 0.7071;
+        const p = document.createElementNS(NS, 'path');
+        p.setAttribute('d', `M${(cx - k).toFixed(2)} ${(cy - k).toFixed(2)} A${r} ${r} 0 0 1 ${(cx + k).toFixed(2)} ${(cy - k).toFixed(2)}`);
+        const an = document.createElementNS(NS, 'animate');
+        an.setAttribute('attributeName', 'opacity');
+        an.setAttribute('values', '0.2;1;0.2');
+        an.setAttribute('dur', '1.6s');
+        an.setAttribute('begin', (i * 0.25) + 's');
+        an.setAttribute('repeatCount', 'indefinite');
+        p.appendChild(an);
+        $('wifi').appendChild(p);
+      });
+    })();
+
+    const WAVE_CX = 300, WAVE_CY = 700, WAVE_STEP = 57, WAVE_RINGS = 14;
+    const WAVE_STEP_MS = 750;
+    const waveCols = ['#c4e80a', '#a6dc00', '#8ed100', '#6cbf00', '#47a700', '#3b9a08', '#2e8c12', '#8ed100'];
+    const waveCircles = [];
+    (function buildWaves() {
+      for (let j = WAVE_RINGS - 1; j >= 0; j--) {
+        const c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', WAVE_CX);
+        c.setAttribute('cy', WAVE_CY);
+        $('waves').appendChild(c);
+        waveCircles[j] = c;
+      }
+    })();
+    function updateWaves(now) {
+      const p = now / WAVE_STEP_MS;
+      const n = Math.floor(p), f = p - n;
+      const len = waveCols.length;
+      for (let j = 0; j < WAVE_RINGS; j++) {
+        const idx = (((j - 1 - n) % len) + len) % len;
+        waveCircles[j].setAttribute('r', ((j + f) * WAVE_STEP).toFixed(2));
+        waveCircles[j].setAttribute('fill', waveCols[idx]);
+      }
+    }
+    updateWaves(0);
+
+    const DIGIT_ROW_STEP = 46;
+    const COL_GAP = 32;
+    const DIGIT_HALF_W = 16, DIGIT_HALF_H = 16;
+
+    const bluePoly = (function () {
+      const path = document.querySelector('.blueD');
+      const total = path.getTotalLength(), n = 900, pts = [];
+      for (let i = 0; i < n; i++) {
+        const p = path.getPointAtLength(total * i / n);
+        pts.push([p.x, p.y]);
+      }
+      return pts;
+    })();
+    function insideBlue(x, y) {
+      let inside = false;
+      for (let i = 0, j = bluePoly.length - 1; i < bluePoly.length; j = i++) {
+        const xi = bluePoly[i][0], yi = bluePoly[i][1], xj = bluePoly[j][0], yj = bluePoly[j][1];
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+      }
+      return inside;
+    }
+    function digitFits(cx, cy) {
+      const w = DIGIT_HALF_W, h = DIGIT_HALF_H;
+      return insideBlue(cx, cy) &&
+             insideBlue(cx - w, cy - h) && insideBlue(cx + w, cy - h) &&
+             insideBlue(cx - w, cy + h) && insideBlue(cx + w, cy + h) &&
+             insideBlue(cx - w, cy) && insideBlue(cx + w, cy) &&
+             insideBlue(cx, cy - h) && insideBlue(cx, cy + h);
+    }
+    function buildRowDefs() {
+      const defs = [];
+      for (let y = 190; y <= 640; y += DIGIT_ROW_STEP) {
+        let best = null, start = null, prev = null;
+        for (let x = 340; x <= 800; x += 2) {
+          if (digitFits(x, y)) {
+            if (start === null) start = x;
+            prev = x;
+          } else if (start !== null) {
+            if (!best || prev - start > best[1] - best[0]) best = [start, prev];
+            start = null;
+          }
+        }
+        if (start !== null && (!best || prev - start > best[1] - best[0])) best = [start, prev];
+        if (!best) continue;
+        const span = best[1] - best[0];
+        const count = Math.floor(span / COL_GAP) + 1;
+        const x0 = best[0] + (span - (count - 1) * COL_GAP) / 2;
+        let s = '';
+        for (let i = 0; i < count; i++) s += Math.random() < 0.5 ? '0' : '1';
+        defs.push({ y, x0, s });
+      }
+      return defs;
+    }
+    const rowDefs = buildRowDefs();
+    const rows = [];
+    const cells = [];
+    rowDefs.forEach(def => {
+      const g = document.createElementNS(NS, 'g');
+      const row = { g, cells: [], hold: 0 };
+      [...def.s].forEach((ch, i) => {
+        const t = document.createElementNS(NS, 'text');
+        t.setAttribute('x', (def.x0 + i * COL_GAP).toFixed(2));
+        t.setAttribute('y', def.y);
+        t.setAttribute('dy', '.36em');
+        t.textContent = ch;
+        g.appendChild(t);
+        const c = { el: t, hold: 0 };
+        row.cells.push(c);
+        cells.push(c);
+      });
+      $('digits').appendChild(g);
+      rows.push(row);
+    });
+
+    const colors = ['#ffffff', '#ffffff', '#ffffff', '#9fe4ff', '#d6f3ff'];
+    function resetCell(c) {
+      c.el.removeAttribute('transform');
+      c.el.setAttribute('fill', '#ffffff');
+      c.el.setAttribute('opacity', '1');
+    }
+    let lastTick = 0;
+    function glitchTick(now) {
+      if (now - lastTick > 70) {
+        lastTick = now;
+        cells.forEach(c => {
+          if (c.hold > 0) { c.hold--; if (c.hold === 0) resetCell(c); return; }
+          if (Math.random() < 0.05) {
+            c.el.textContent = Math.random() < 0.5 ? '0' : '1';
+            if (Math.random() < 0.5) {
+              c.el.setAttribute('transform', `translate(${rand(8) - 4} ${rand(5) - 2})`);
+              c.el.setAttribute('fill', colors[rand(colors.length)]);
+              c.el.setAttribute('opacity', (0.25 + Math.random() * 0.75).toFixed(2));
+              c.hold = 1 + rand(3);
+            }
+          }
+        });
+        rows.forEach(r => {
+          if (r.hold > 0) { r.hold--; if (r.hold === 0) r.g.removeAttribute('transform'); return; }
+          if (Math.random() < 0.035) {
+            r.g.setAttribute('transform', `translate(${rand(9) - 4} 0)`);
+            r.hold = 1 + rand(2);
+          }
+        });
+      }
+    }
+
+    const ORB = { cx: 594.6, cy: 389.8, a: 454.3, b: 148.7, rot: -0.526, egg: 0.06 };
+    const THK = { base: 11.66, left: 22.13, leftK: 6.56, right: 14.1, rightK: 10.52, rightAt: 0.076, near: 2.41 };
+    const TAU = Math.PI * 2;
+    const ORB_COS = Math.cos(ORB.rot), ORB_SIN = Math.sin(ORB.rot);
+
+    function ringPoint(t) {
+      const u = ORB.a * Math.cos(t);
+      const v = ORB.b * Math.sin(t) * (1 + ORB.egg * Math.cos(t));
+      return [ORB.cx + ORB_COS * u - ORB_SIN * v, ORB.cy + ORB_SIN * u + ORB_COS * v];
+    }
+    function ringWidth(t) {
+      return THK.base
+        + THK.left * Math.exp(THK.leftK * (Math.cos(t - Math.PI) - 1))
+        + THK.right * Math.exp(THK.rightK * (Math.cos(t - THK.rightAt) - 1))
+        + THK.near * Math.sin(t);
+    }
+
+    const RN = 1440;
+    const RH = RN / 2;
+    const ringT = (i) => TAU * i / RN;
+    function ringEdges(i) {
+      const t = ringT(i), e = 1e-4;
+      const p = ringPoint(t), a = ringPoint(t - e), b = ringPoint(t + e);
+      const tx = b[0] - a[0], ty = b[1] - a[1], len = Math.hypot(tx, ty) || 1;
+      const h = ringWidth(t) / 2, nx = -ty / len, ny = tx / len;
+      return [[p[0] + nx * h, p[1] + ny * h], [p[0] - nx * h, p[1] - ny * h]];
+    }
+    function ringPath(i0, i1) {
+      const outer = [], inner = [];
+      for (let i = i0; i <= i1; i++) {
+        const e = ringEdges(i);
+        outer.push(e[0]); inner.push(e[1]);
+      }
+      return 'M' + outer.map(fmt).join(' L') + ' L' + inner.reverse().map(fmt).join(' L') + ' Z';
+    }
+    const OVERLAP = 3;
+    $('ringFront').setAttribute('d', ringPath(-OVERLAP, RH + OVERLAP));
+    $('ringBack').setAttribute('d', ringPath(RH - OVERLAP, RN + OVERLAP));
+
+    const ringCum = [0];
+    let prevPt = ringPoint(0);
+    for (let i = 1; i <= RN; i++) {
+      const q = ringPoint(ringT(i));
+      ringCum.push(ringCum[i - 1] + Math.hypot(q[0] - prevPt[0], q[1] - prevPt[1]));
+      prevPt = q;
+    }
+    const RING_LEN = ringCum[RN];
+
+    const ball = $('ball'), frontLayer = $('frontLayer'), backLayer = $('backLayer');
+    const PERIOD = 6500;
+    function placeBall(now) {
+      const d = ((now / PERIOD) % 1) * RING_LEN;
+      let lo = 0, hi = RN;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ringCum[m] <= d) lo = m; else hi = m; }
+      const k = (d - ringCum[lo]) / ((ringCum[lo + 1] - ringCum[lo]) || 1);
+      const t = ringT(lo + k);
+      const pos = ringPoint(t);
+      const depth = Math.sin(t);
+      const s = 1 + 0.1 * depth;
+      ball.setAttribute('transform', `translate(${pos[0].toFixed(2)} ${pos[1].toFixed(2)}) scale(${s.toFixed(3)})`);
+      const target = depth >= 0 ? frontLayer : backLayer;
+      if (ball.parentNode !== target) target.appendChild(ball);
+    }
+    placeBall(0);
+
+    let running = true;
+    function frame(now) {
+      if (!running) return;
+      glitchTick(now);
+      updateWaves(now);
+      placeBall(now);
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</body>
+</html>

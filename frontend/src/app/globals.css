@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@font-face {
+  font-family: 'Elegant';
+  src: url('/fonts/ELEGANT.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'LogaDisplay';
+  src: url('/fonts/Loga_Display.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-serif-executive {
+  font-family: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
+}
+
+/* Suppress Next.js Development Floating Toolbars & Overlays */
+nextjs-portal,
+[data-nextjs-dev-tools-button],
+[data-nextjs-toast],
+div[data-nextjs-scroll-focus-boundary] + div:has([data-nextjs-dev-tools-button]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Official Government Letterhead Paper Styling */
+.official-letterhead {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+  border-radius: 8px;
+  padding: 40px;
+  position: relative;
+  color: #1e293b;
+  font-family: var(--font-geist-sans), sans-serif;
+  line-height: 1.6;
+}
+
+.letterhead-border-top {
+  border-top: 4px double #0f172a;
+  border-bottom: 2px solid #0f172a;
+  padding: 16px 0;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+/* Print Specific Rules */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-letter, .printable-letter * {
+    visibility: visible;
+  }
+  .printable-letter {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 20mm;
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
