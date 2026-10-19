@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useCreateLetterMutation, useUploadFileMutation } from '../services/letterApi';
-import { useGetDirectoriesQuery } from '@/modules/authmodule/services/authApi';
+import { useGetDirectoriesQuery, useGetUsersQuery } from '@/modules/authmodule/services/authApi';
 import { useAppSelector } from '@/store';
 import { LetterPriority, LetterDirection } from '@/types/letter';
 import {
@@ -21,6 +21,8 @@ import {
   FileCheck,
   AlertCircle,
   Loader2,
+  UserCheck,
+  Building2,
 } from 'lucide-react';
 
 interface UploadedAttachment {
@@ -46,6 +48,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 }) => {
   const currentUser = useAppSelector((state) => state.auth.user);
   const { data: dirsData } = useGetDirectoriesQuery();
+  const { data: usersData } = useGetUsersQuery();
   const [createLetter, { isLoading }] = useCreateLetterMutation();
   const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
 
@@ -55,6 +58,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   const [priority, setPriority] = useState<LetterPriority>('Routine');
   const [letterType, setLetterType] = useState('Official Letter');
   const [recipientDirectoryId, setRecipientDirectoryId] = useState<number | ''>('');
+  const [assignedOfficerId, setAssignedOfficerId] = useState<number | ''>('');
 
   // Outbound target type (External vs Internal Directive)
   const [outboundTargetType, setOutboundTargetType] = useState<'EXTERNAL' | 'INTERNAL_DIRECTIVE'>('EXTERNAL');
@@ -137,8 +141,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         alert('Please specify the recipient external organization or government authority.');
         return;
       }
-      if (outboundTargetType === 'INTERNAL_DIRECTIVE' && !recipientDirectoryId) {
-        alert('Please select a subordinate target directorate for this directive.');
+      if (outboundTargetType === 'INTERNAL_DIRECTIVE' && !recipientDirectoryId && !assignedOfficerId) {
+        alert('Please select a target directorate or specific personnel for this directive.');
         return;
       }
     }
@@ -152,6 +156,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         direction,
         recipient_type: direction === 'INCOMING' ? 'INTERNAL' : outboundTargetType === 'EXTERNAL' ? 'EXTERNAL' : 'INTERNAL',
         recipient_directory_id: recipientDirectoryId ? Number(recipientDirectoryId) : undefined,
+        assigned_officer_id: assignedOfficerId ? Number(assignedOfficerId) : undefined,
         external_recipient_org: direction === 'OUTGOING' && outboundTargetType === 'EXTERNAL' ? externalRecipientOrg.trim() : undefined,
         external_recipient_name: direction === 'OUTGOING' && outboundTargetType === 'EXTERNAL' ? externalRecipientName.trim() : undefined,
         external_recipient_address: direction === 'OUTGOING' && outboundTargetType === 'EXTERNAL' ? externalRecipientAddress.trim() : undefined,
@@ -173,6 +178,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       setExternalRecipientName('');
       setExternalRecipientAddress('');
       setRecipientDirectoryId('');
+      setAssignedOfficerId('');
     } catch (err) {
       console.error('Error creating letter:', err);
       alert('Failed to save correspondence. Check backend server.');
@@ -401,46 +407,173 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="pt-1">
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
-                    Subordinate Target Directorate * (Excludes Own Office)
-                  </label>
-                  <select
-                    value={recipientDirectoryId}
-                    onChange={(e) => setRecipientDirectoryId(e.target.value ? Number(e.target.value) : '')}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                  >
-                    <option value="">Select Target Directorate (Subordinates Only)</option>
-                    {dirsData?.directories
-                      ?.filter((d) => d.id !== currentUser?.directory_id)
-                      ?.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name} ({d.code})
-                        </option>
-                      ))}
-                  </select>
+                <div className="pt-1 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-slate-500" />
+                        <span>Target Directorate *</span>
+                      </label>
+                      <select
+                        value={recipientDirectoryId}
+                        onChange={(e) => {
+                          const dirId = e.target.value ? Number(e.target.value) : '';
+                          setRecipientDirectoryId(dirId);
+                          if (dirId && assignedOfficerId) {
+                            const selUser = usersData?.users?.find((u) => u.id === assignedOfficerId);
+                            if (selUser && selUser.directory_id !== dirId) {
+                              setAssignedOfficerId('');
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      >
+                        <option value="">Select Target Directorate</option>
+                        {dirsData?.directories
+                          ?.filter((d) => currentUser?.role === 'Department Head' || currentUser?.role === 'System Admin' || d.id !== currentUser?.directory_id)
+                          ?.map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.code})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Direct Attention To</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-normal lowercase">(specific officer / lead)</span>
+                      </label>
+                      <select
+                        value={assignedOfficerId}
+                        onChange={(e) => {
+                          const val = e.target.value ? Number(e.target.value) : '';
+                          setAssignedOfficerId(val);
+                          if (val) {
+                            const selUser = usersData?.users?.find((u) => u.id === val);
+                            if (selUser?.directory_id && !recipientDirectoryId) {
+                              setRecipientDirectoryId(selUser.directory_id);
+                            }
+                          }
+                        }}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      >
+                        <option value="">Entire Directorate (Lead / Registry Desk)</option>
+                        {usersData?.users
+                          ?.filter((u) => {
+                            if (u.id === currentUser?.id) return false;
+                            if (recipientDirectoryId) return u.directory_id === recipientDirectoryId;
+                            return true;
+                          })
+                          ?.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.full_name} — {u.role === 'Directory Lead' ? `Lead (${u.directory_name || 'Directorate'})` : `${u.role} (${u.position_title})`}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {assignedOfficerId && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-900 rounded-lg text-xs border border-emerald-200">
+                      <FileCheck className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                      <span>
+                        Directed specifically to{' '}
+                        <strong>
+                          {usersData?.users?.find((u) => u.id === assignedOfficerId)?.full_name}
+                        </strong>{' '}
+                        ({usersData?.users?.find((u) => u.id === assignedOfficerId)?.role} —{' '}
+                        {usersData?.users?.find((u) => u.id === assignedOfficerId)?.position_title}).
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-900 mb-1">
-                  Assigned Target Directorate
-                </label>
-                <select
-                  value={recipientDirectoryId}
-                  onChange={(e) => setRecipientDirectoryId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
-                >
-                  <option value="">Executive Triage (Unassigned)</option>
-                  {dirsData?.directories?.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.code})
-                    </option>
-                  ))}
-                </select>
+            <div className="space-y-3 p-3.5 bg-blue-50/50 rounded-xl border border-blue-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Assigned Target Directorate</span>
+                  </label>
+                  <select
+                    value={recipientDirectoryId}
+                    onChange={(e) => {
+                      const dirId = e.target.value ? Number(e.target.value) : '';
+                      setRecipientDirectoryId(dirId);
+                      if (dirId && assignedOfficerId) {
+                        const selUser = usersData?.users?.find((u) => u.id === assignedOfficerId);
+                        if (selUser && selUser.directory_id !== dirId) {
+                          setAssignedOfficerId('');
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  >
+                    <option value="">Executive Triage (Unassigned)</option>
+                    {dirsData?.directories?.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Direct Attention To</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal lowercase">(specific officer / lead)</span>
+                  </label>
+                  <select
+                    value={assignedOfficerId}
+                    onChange={(e) => {
+                      const val = e.target.value ? Number(e.target.value) : '';
+                      setAssignedOfficerId(val);
+                      if (val) {
+                        const selUser = usersData?.users?.find((u) => u.id === val);
+                        if (selUser?.directory_id && !recipientDirectoryId) {
+                          setRecipientDirectoryId(selUser.directory_id);
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                  >
+                    <option value="">Entire Directorate (Lead / Desk)</option>
+                    {usersData?.users
+                      ?.filter((u) => {
+                        if (recipientDirectoryId) return u.directory_id === recipientDirectoryId;
+                        return true;
+                      })
+                      ?.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name} — {u.role === 'Directory Lead' ? `Lead (${u.directory_name || 'Directorate'})` : `${u.role} (${u.position_title})`}
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
+
+              {assignedOfficerId && (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100/70 text-blue-900 rounded-lg text-xs border border-blue-200">
+                  <FileCheck className="w-3.5 h-3.5 text-blue-700 flex-shrink-0" />
+                  <span>
+                    Inbound letter will be assigned directly to{' '}
+                    <strong>
+                      {usersData?.users?.find((u) => u.id === assignedOfficerId)?.full_name}
+                    </strong>{' '}
+                    ({usersData?.users?.find((u) => u.id === assignedOfficerId)?.role}).
+                  </span>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-slate-900 mb-1">
                   Letter Type *
@@ -448,7 +581,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                 <select
                   value={letterType}
                   onChange={(e) => setLetterType(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-blue-600 focus:outline-none"
                 >
                   <option>Official Letter</option>
                   <option>Executive Directive / Instruction</option>

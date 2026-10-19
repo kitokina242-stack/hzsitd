@@ -448,6 +448,8 @@ export const FullDocumentModal: React.FC<FullDocumentModalProps> = ({
                         <span className="text-slate-900 font-medium">
                           {letter.direction === 'INCOMING'
                             ? letter.recipient_dir_name || 'Executive Office'
+                            : letter.recipient_type === 'INTERNAL'
+                            ? `${letter.recipient_dir_name || 'Department Directorate'}${letter.assigned_officer_name ? ` (Attn: ${letter.assigned_officer_name})` : ''}`
                             : letter.external_recipient_name
                             ? `${letter.external_recipient_name}, ${letter.external_recipient_org || ''}`
                             : letter.recipient_dir_name || 'General Delivery'}

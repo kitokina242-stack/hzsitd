@@ -204,7 +204,9 @@ app.get('/api/stats', (req, res) => {
       SELECT COUNT(*) AS count FROM letters 
       WHERE (direction = 'INCOMING' AND recipient_directory_id = ?)
          OR (direction = 'OUTGOING' AND approval_stage = 'Department Head Endorsement')
-    `).get(user.directory_id).count;
+         OR (recipient_directory_id = ? AND recipient_type = 'INTERNAL')
+         OR (assigned_officer_id = ?)
+    `).get(user.directory_id, user.directory_id, user.id).count;
   } else if (user.role === 'Directory Lead') {
     // Directory Lead sees incoming routed to their directory + outgoing drafts from their officers awaiting review
     pendingCount = db.prepare(`
@@ -215,9 +217,10 @@ app.get('/api/stats', (req, res) => {
 
     inboxCount = db.prepare(`
       SELECT COUNT(*) AS count FROM letters 
-      WHERE (direction = 'INCOMING' AND recipient_directory_id = ?)
+      WHERE (recipient_directory_id = ? AND (direction = 'INCOMING' OR recipient_type = 'INTERNAL'))
+         OR (assigned_officer_id = ?)
          OR (direction = 'OUTGOING' AND approval_stage = 'Directory Lead Review' AND sender_directory_id = ?)
-    `).get(user.directory_id, user.directory_id).count;
+    `).get(user.directory_id, user.id, user.directory_id).count;
   } else {
     // Level 1 Officer sees letters assigned to them or returned to them
     pendingCount = db.prepare(`
@@ -285,13 +288,17 @@ app.get('/api/letters', (req, res) => {
       sql += ` AND (
         (l.direction = 'INCOMING')
         OR (l.direction = 'OUTGOING' AND l.approval_stage = 'Department Head Endorsement')
+        OR (l.recipient_directory_id = ? AND l.recipient_type = 'INTERNAL')
+        OR (l.assigned_officer_id = ?)
       )`;
+      params.push(user.directory_id, user.id);
     } else if (user.role === 'Directory Lead') {
       sql += ` AND (
-        (l.direction = 'INCOMING' AND l.recipient_directory_id = ?)
+        (l.recipient_directory_id = ? AND (l.direction = 'INCOMING' OR l.recipient_type = 'INTERNAL'))
+        OR (l.assigned_officer_id = ?)
         OR (l.direction = 'OUTGOING' AND l.approval_stage = 'Directory Lead Review' AND l.sender_directory_id = ?)
       )`;
-      params.push(user.directory_id, user.directory_id);
+      params.push(user.directory_id, user.id, user.directory_id);
     } else {
       // Officer
       sql += ` AND (l.assigned_officer_id = ? OR (l.created_by = ? AND l.status = 'Returned for Revision'))`;
@@ -432,11 +439,16 @@ app.post('/api/letters', (req, res) => {
     return res.status(400).json({ success: false, message: 'Subject and Letter Body are required.' });
   }
 
-  // Administrative Protocol Check: Prevent sending letter to oneself/own directory
-  if (direction === 'OUTGOING' && recipient_type === 'INTERNAL' && recipient_directory_id && Number(recipient_directory_id) === user.directory_id) {
+  // Administrative Protocol Check: Prevent sending letter to oneself
+  const isDirectingToSelf = (assigned_officer_id && Number(assigned_officer_id) === user.id);
+  const isDirectingToOwnDirWithoutOfficer = (!assigned_officer_id && recipient_directory_id && Number(recipient_directory_id) === user.directory_id && user.role !== 'Department Head');
+
+  if (direction === 'OUTGOING' && recipient_type === 'INTERNAL' && (isDirectingToSelf || isDirectingToOwnDirWithoutOfficer)) {
     return res.status(400).json({
       success: false,
-      message: 'Administrative Protocol Violation: An author cannot address an internal letter or directive to their own office/directory.'
+      message: isDirectingToSelf
+        ? 'Administrative Protocol Violation: An author cannot address an internal letter or directive to themselves.'
+        : 'Administrative Protocol Violation: Please designate a specific officer/lead or select a subordinate target directorate.'
     });
   }
 
@@ -527,9 +539,16 @@ app.post('/api/letters', (req, res) => {
 
   // Log Timeline
   const actionText = is_draft ? 'Draft Created' : 'Letter Submitted';
-  const notes = is_draft 
+  let notes = is_draft 
     ? `Saved as draft by ${user.full_name}.`
     : `Submitted by ${user.full_name} (${user.role}). Routed to ${initialStage}.`;
+
+  if (!is_draft && assigned_officer_id) {
+    const assignedUser = db.prepare('SELECT full_name, role, position_title FROM users WHERE id = ?').get(assigned_officer_id);
+    if (assignedUser) {
+      notes += ` Specifically directed to ${assignedUser.full_name} (${assignedUser.role} — ${assignedUser.position_title}).`;
+    }
+  }
   logTimeline(letterId, user.id, actionText, notes);
 
   // Real-time notification broadcast

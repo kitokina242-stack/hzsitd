@@ -21,6 +21,7 @@ import {
   Eye,
   FileCheck,
   Share2,
+  UserCheck,
 } from 'lucide-react';
 
 interface LetterDetailsSheetProps {
@@ -222,8 +223,18 @@ export const LetterDetailsSheet: React.FC<LetterDetailsSheetProps> = ({
                     <span className="font-semibold text-slate-900">To: </span>
                     {letter.direction === 'INCOMING'
                       ? letter.recipient_dir_name || 'Executive Office'
-                      : letter.external_recipient_name || 'General Delivery'}
+                      : letter.recipient_type === 'INTERNAL'
+                        ? letter.recipient_dir_name || 'Internal Directorate'
+                        : letter.external_recipient_name || 'General Delivery'}
                   </div>
+                  {letter.assigned_officer_name && (
+                    <div className="pt-1 flex items-center gap-1.5 text-blue-700 text-xs">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 border border-blue-200 text-[11px] font-semibold text-blue-800">
+                        <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Direct Attention: {letter.assigned_officer_name}</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
