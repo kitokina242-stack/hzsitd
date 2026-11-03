@@ -22,12 +22,17 @@ import { AssignMinuteModal } from '../components/AssignMinuteModal';
 import { RoleSwitcher } from '@/modules/authmodule/components/RoleSwitcher';
 import { UserProfileModal } from '@/modules/authmodule/components/UserProfileModal';
 import { MessagingDrawer } from '@/modules/messagemodule/components/MessagingDrawer';
+import { DirectoriesManager } from '@/modules/directories/components/DirectoriesManager';
+import { UsersManager } from '@/modules/users/components/UsersManager';
+import { AuditLogViewer } from '@/modules/audit/components/AuditLogViewer';
+import { WebsiteCmsManager } from '@/modules/website/components/WebsiteCmsManager';
 import { useSocket } from '@/modules/messagemodule/hooks/useSocket';
 import { NotificationDropdown } from '@/modules/messagemodule/components/NotificationDropdown';
 import { StatusPill } from '../components/StatusPill';
 import { PriorityBadge } from '../components/PriorityBadge';
 import {
   Search,
+  Building2,
   Plus,
   Home,
   Mail,
@@ -69,6 +74,7 @@ export type NavKey =
   | 'clearance'
   | 'directives'
   | 'directory'
+  | 'directories'
   | 'audit'
   | 'users'
   | 'settings';
@@ -280,6 +286,18 @@ export const LetterDashboardLayout: React.FC = () => {
     pageSubtitle = dir
       ? `All official correspondence involving the ${dir.name} (${dir.code}) directory · ${dir.amharic_name || ''}`
       : '';
+  } else if (currentNav === 'directories') {
+    pageTitle = 'Organizational Directorate Architecture';
+    pageSubtitle = 'Official administrative departments and zonal directorates.';
+  } else if (currentNav === 'users') {
+    pageTitle = 'Personnel Directory & RBAC Clearance';
+    pageSubtitle = 'Manage civil servants, role permissions, approval states, and zonal credentials.';
+  } else if (currentNav === 'audit') {
+    pageTitle = 'System-Wide Cryptographic Audit Trail';
+    pageSubtitle = 'Immutable government ledger recording all digital seals, minutes, and operations.';
+  } else if (currentNav === 'settings') {
+    pageTitle = 'Public Website & Portal CMS';
+    pageSubtitle = 'Manage public notices, citizen FAQs, and review incoming contact inquiries.';
   }
 
   const selectedDir = directories.find((d) => d.id === selectedDirId);
@@ -555,15 +573,18 @@ export const LetterDashboardLayout: React.FC = () => {
                   <div className="space-y-0.5 text-xs text-slate-600">
                     <button
                       type="button"
-                      onClick={() => setCurrentNav('audit')}
+                      onClick={() => {
+                        setCurrentNav('directories');
+                        setSelectedDirId(null);
+                      }}
                       className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
-                        currentNav === 'audit'
+                        currentNav === 'directories'
                           ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
                           : 'hover:text-slate-900 hover:bg-slate-100/70'
                       }`}
                     >
-                      <FileText className="w-5 h-5 text-slate-500 flex-shrink-0" />
-                      <span>Audit Trail</span>
+                      <Building2 className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                      <span>Directorates Architecture</span>
                     </button>
                     <button
                       type="button"
@@ -576,6 +597,30 @@ export const LetterDashboardLayout: React.FC = () => {
                     >
                       <Users className="w-5 h-5 text-slate-500 flex-shrink-0" />
                       <span>Staff Directory</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('audit')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'audit'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <FileText className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                      <span>Audit Trail</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('settings')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'settings'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <Settings className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                      <span>Website CMS &amp; Inquiries</span>
                     </button>
                   </div>
                 </div>
@@ -981,6 +1026,21 @@ export const LetterDashboardLayout: React.FC = () => {
                   <div className="space-y-0.5 text-xs text-slate-600">
                     <button
                       type="button"
+                      onClick={() => {
+                        setCurrentNav('directories');
+                        setSelectedDirId(null);
+                      }}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'directories'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <Building2 className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                      <span>Directorates Architecture</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => setCurrentNav('users')}
                       className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
                         currentNav === 'users'
@@ -1013,7 +1073,7 @@ export const LetterDashboardLayout: React.FC = () => {
                       }`}
                     >
                       <Settings className="w-5 h-5 text-slate-500 flex-shrink-0" />
-                      <span>Zonal Configuration</span>
+                      <span>Website CMS &amp; Inquiries</span>
                     </button>
                   </div>
                 </div>
@@ -2479,189 +2539,44 @@ export const LetterDashboardLayout: React.FC = () => {
             )}
 
             {/* =============================================================
-                VIEW C: STAFF ACCOUNTS & ROLES (System Governance)
+                VIEW: ORGANIZATIONAL DIRECTORATES (Module 4 - DIR)
+                ============================================================= */}
+            {(currentNav === 'directories' || (currentNav === 'directory' && selectedDirId === null)) && (
+              <DirectoriesManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+                onSelectDirectoryLetters={(dirId) => {
+                  setSelectedDirId(dirId);
+                  setCurrentNav('directory');
+                }}
+              />
+            )}
+
+            {/* =============================================================
+                VIEW: STAFF ACCOUNTS & ROLES (Module 3 - USR)
                 ============================================================= */}
             {currentNav === 'users' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-200 bg-white p-6 rounded-2xl border shadow-sm">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentNav('dashboard')}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition mb-2"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back to Dashboard Overview</span>
-                    </button>
-                    <h1 className="font-serif-executive text-2xl sm:text-3xl text-slate-900">
-                      Staff Accounts &amp; Cryptographic Roles
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Personnel directory with role-based clearance permissions across HZSITD.
-                    </p>
-                  </div>
-                  <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 border border-slate-200">
-                    {allStaffUsers.length} Officers Registered
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {allStaffUsers.map((user) => (
-                    <div
-                      key={user.id}
-                      className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-start gap-4 hover:border-slate-300 transition"
-                    >
-                      <div className="w-12 h-12 rounded-xl bg-emerald-700 text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-xs">
-                        {user.full_name.charAt(0)}
-                      </div>
-                      <div className="space-y-1 flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-bold text-sm text-slate-900">{user.full_name}</h4>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              user.role === 'Department Head'
-                                ? 'bg-red-100 text-red-800'
-                                : user.role === 'Directory Lead'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-emerald-100 text-emerald-800'
-                            }`}
-                          >
-                            {user.role}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500">{user.position_title}</p>
-                        <p className="text-[11px] font-mono text-slate-400">{user.email}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <UsersManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+                directories={directories}
+              />
             )}
 
             {/* =============================================================
-                VIEW D: AUDIT TRAIL LOGS (System Governance)
+                VIEW: AUDIT TRAIL LOGS (Module 9 - AUD)
                 ============================================================= */}
             {currentNav === 'audit' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-200 bg-white p-6 rounded-2xl border shadow-sm">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentNav('dashboard')}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition mb-2"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back to Dashboard Overview</span>
-                    </button>
-                    <h1 className="font-serif-executive text-2xl sm:text-3xl text-slate-900">
-                      System-Wide Cryptographic Audit Trail
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Immutable record of all digital signatures, stage transitions, and minute entries.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4">
-                  <div className="space-y-4">
-                    {allLetters.slice(0, 15).map((l, idx) => (
-                      <div key={idx} className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition border border-transparent hover:border-slate-100">
-                        <div className="w-8 h-8 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
-                          {idx + 1}
-                        </div>
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-xs text-slate-900 font-mono">
-                              {l.reference_no} — {l.subject}
-                            </span>
-                            <span className="text-[10px] text-slate-400">{l.created_at}</span>
-                          </div>
-                          <div className="flex items-center gap-3 text-xs text-slate-600">
-                            <span>Stage: <strong className="text-slate-800">{l.approval_stage}</strong></span>
-                            <span>·</span>
-                            <span>Status: <strong className="text-emerald-700">{l.status}</strong></span>
-                            <span>·</span>
-                            <span>Officer: {l.sender_name || 'Staff'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <AuditLogViewer
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+              />
             )}
 
             {/* =============================================================
-                VIEW E: SYSTEM SETTINGS (System Governance)
+                VIEW: WEBSITE CONTENT CMS & FAQS (Module 8 - WEB)
                 ============================================================= */}
             {currentNav === 'settings' && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-slate-200 bg-white p-6 rounded-2xl border shadow-sm">
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentNav('dashboard')}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-900 transition mb-2"
-                    >
-                      <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back to Dashboard Overview</span>
-                    </button>
-                    <h1 className="font-serif-executive text-2xl sm:text-3xl text-slate-900">
-                      System Governance &amp; Configuration
-                    </h1>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Zonal parameters, cryptographic key rotation, and document numbering sequences.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-sm space-y-6 max-w-3xl">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Department Name (English)
-                      </label>
-                      <input
-                        type="text"
-                        readOnly
-                        value="Hadiya Zone Science & Information Technology Department"
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Department Name (Amharic)
-                      </label>
-                      <input
-                        type="text"
-                        readOnly
-                        value="በኢትዮጵያ ፌዴራላዊ ዲሞክራሲያዊ ሪፐብሊክ የሀዲያ ዞን አስተዳደር"
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Document Reference Numbering Prefix
-                      </label>
-                      <input
-                        type="text"
-                        readOnly
-                        value="HZSITD/{DIRECTION}/{YEAR}/{SEQUENCE}"
-                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono text-slate-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Cryptographic Hashing Algorithm
-                      </label>
-                      <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center gap-2 text-xs text-emerald-800 font-bold">
-                        <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                        <span>SHA-256 Public Verification Active</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <WebsiteCmsManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+              />
             )}
           </div>
         </main>
