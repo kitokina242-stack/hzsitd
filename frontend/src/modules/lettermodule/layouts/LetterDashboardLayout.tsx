@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { logout } from '@/modules/authmodule/features/authSlice';
 import {
@@ -114,18 +115,27 @@ const LetterSubjectCell: React.FC<LetterSubjectCellProps> = ({ letter, onOpenPdf
 export const LetterDashboardLayout: React.FC = () => {
   useSocket(); // Real-time socket listeners & RTK cache invalidation
 
+  const router = useRouter();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const activeRole = useAppSelector((state) => state.auth.activeRole);
   const currentUser = useAppSelector((state) => state.auth.user);
   const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, router]);
 
   const handleLogout = () => {
     try {
       localStorage.removeItem('hzsitd_token');
       localStorage.removeItem('hzsitd_user');
+      localStorage.removeItem('hzsitd_refresh_token');
       sessionStorage.clear();
     } catch (e) {}
     dispatch(logout());
-    window.location.href = '/html/index.html';
+    router.push('/login');
   };
 
   const [currentNav, setCurrentNav] = useState<NavKey>('dashboard');
@@ -273,6 +283,17 @@ export const LetterDashboardLayout: React.FC = () => {
   }
 
   const selectedDir = directories.find((d) => d.id === selectedDirId);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-slate-900 font-sans text-xs font-semibold text-slate-300">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <span>Authenticating session... Redirecting to Staff Login...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">

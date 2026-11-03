@@ -84,13 +84,30 @@ const getInitialRefreshToken = () => {
   return null;
 };
 
+const getInitialUser = (): User | null => {
+  if (typeof window !== 'undefined') {
+    const rawUser = localStorage.getItem('hzsitd_user');
+    if (rawUser) {
+      try {
+        return JSON.parse(rawUser);
+      } catch (e) {
+        return null;
+      }
+    }
+  }
+  return null;
+};
+
+const initialToken = getInitialToken();
+const initialUser = getInitialUser();
+
 const initialState: AuthState = {
-  token: getInitialToken(),
+  token: initialToken,
   refreshToken: getInitialRefreshToken(),
-  user: PRESET_GOVERNMENT_USERS.dr_bezabih,
-  isAuthenticated: true,
-  activeRole: 'Department Head',
-  activeDirectoryId: 1
+  user: initialUser,
+  isAuthenticated: Boolean(initialToken && initialUser),
+  activeRole: initialUser?.role || 'Officer',
+  activeDirectoryId: initialUser?.directory_id || 1
 };
 
 export const authSlice = createSlice({
@@ -111,6 +128,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = true;
       if (typeof window !== 'undefined') {
         localStorage.setItem('hzsitd_token', action.payload.token);
+        localStorage.setItem('hzsitd_user', JSON.stringify(action.payload.user));
         if (action.payload.refreshToken) {
           localStorage.setItem('hzsitd_refresh_token', action.payload.refreshToken);
         }
@@ -122,6 +140,9 @@ export const authSlice = createSlice({
     ) => {
       if (state.user) {
         state.user = { ...state.user, ...action.payload };
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('hzsitd_user', JSON.stringify(state.user));
+        }
       }
     },
     setActiveDirectoryId: (state, action: PayloadAction<number>) => {
@@ -131,15 +152,23 @@ export const authSlice = createSlice({
       const preset = PRESET_GOVERNMENT_USERS[action.payload];
       if (preset) {
         state.user = preset;
+        state.token = `mock-token-${preset.username}`;
         state.activeRole = preset.role;
         state.activeDirectoryId = preset.directory_id;
         state.isAuthenticated = true;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('hzsitd_token', state.token);
+          localStorage.setItem('hzsitd_user', JSON.stringify(preset));
+        }
       }
     },
     setActiveRole: (state, action: PayloadAction<UserRole>) => {
       state.activeRole = action.payload;
       if (state.user) {
         state.user.role = action.payload;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('hzsitd_user', JSON.stringify(state.user));
+        }
       }
     },
     logout: (state) => {
@@ -149,6 +178,7 @@ export const authSlice = createSlice({
       state.isAuthenticated = false;
       if (typeof window !== 'undefined') {
         localStorage.removeItem('hzsitd_token');
+        localStorage.removeItem('hzsitd_user');
         localStorage.removeItem('hzsitd_refresh_token');
       }
     }
