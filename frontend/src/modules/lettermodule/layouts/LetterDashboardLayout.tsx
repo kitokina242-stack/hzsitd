@@ -19,6 +19,8 @@ import { FullDocumentModal } from '../components/FullDocumentModal';
 import { ComposeModal } from '../components/ComposeModal';
 import { AssignMinuteModal } from '../components/AssignMinuteModal';
 import { RoleSwitcher } from '@/modules/authmodule/components/RoleSwitcher';
+import { UserProfileModal } from '@/modules/authmodule/components/UserProfileModal';
+import { MessagingDrawer } from '@/modules/messagemodule/components/MessagingDrawer';
 import { useSocket } from '@/modules/messagemodule/hooks/useSocket';
 import { NotificationDropdown } from '@/modules/messagemodule/components/NotificationDropdown';
 import { StatusPill } from '../components/StatusPill';
@@ -53,6 +55,7 @@ import {
   Paperclip,
   ExternalLink,
   LogOut,
+  MessageSquare,
 } from 'lucide-react';
 
 export type NavKey =
@@ -133,6 +136,8 @@ export const LetterDashboardLayout: React.FC = () => {
   const [isComposeOpen, setIsComposeOpen] = useState(false);
   const [composeInitialSubject, setComposeInitialSubject] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isMessagingDrawerOpen, setIsMessagingDrawerOpen] = useState(false);
 
   const [assignModalLetter, setAssignModalLetter] = useState<Letter | null>(null);
   const [assignModalMode, setAssignModalMode] = useState<'assign_directory' | 'delegate_officer'>('assign_directory');
@@ -1056,8 +1061,39 @@ export const LetterDashboardLayout: React.FC = () => {
               <span>Connected</span>
             </div>
 
+            {/* Real-time Internal Directives Messaging */}
+            <button
+              type="button"
+              onClick={() => setIsMessagingDrawerOpen(true)}
+              title="Internal Directives & Correspondence Chat"
+              className="p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition border border-slate-200/80 flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+            >
+              <MessageSquare className="w-4 h-4 text-emerald-600" />
+              <span className="hidden md:inline">Directives Chat</span>
+            </button>
+
             {/* Real-time Notifications Bell */}
             <NotificationDropdown />
+
+            {/* User Profile & Security Menu Trigger */}
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              title="Staff Profile & Security Settings"
+              className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl hover:bg-slate-100 transition border border-transparent hover:border-slate-200 cursor-pointer"
+            >
+              <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                {currentUser?.full_name ? currentUser.full_name[0] : 'U'}
+              </div>
+              <div className="hidden lg:block text-left">
+                <div className="text-xs font-bold text-slate-800 leading-tight">
+                  {currentUser?.full_name || 'Staff User'}
+                </div>
+                <div className="text-[10px] text-slate-500 font-medium">
+                  {currentUser?.role || 'Officer'}
+                </div>
+              </div>
+            </button>
 
             {/* New Letter Compose Button */}
             <button
@@ -2650,6 +2686,18 @@ export const LetterDashboardLayout: React.FC = () => {
         directories={directories}
         officers={allStaffUsers.filter((u) => u.role === 'Officer')}
         onClose={() => setAssignModalLetter(null)}
+      />
+
+      {/* Staff User Profile & Change Password Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      {/* Real-time Internal Directives & Correspondence Messaging Drawer */}
+      <MessagingDrawer
+        isOpen={isMessagingDrawerOpen}
+        onClose={() => setIsMessagingDrawerOpen(false)}
       />
     </div>
   );

@@ -7,11 +7,14 @@ export interface GetLettersParams {
   priority?: string;
   direction?: string;
   search?: string;
+  page?: number;
+  limit?: number;
 }
 
 export interface LetterDetailResponse {
   success: boolean;
   letter: Letter;
+  data?: any;
   timeline: LetterTimeline[];
   comments: LetterComment[];
   attachments: LetterAttachment[];
@@ -25,7 +28,9 @@ export type WorkflowAction =
   | 'endorse_and_sign'
   | 'assign_to_directory'
   | 'delegate_to_officer'
-  | 'archive';
+  | 'archive'
+  | 'receive'
+  | 'close';
 
 export interface ExecuteActionPayload {
   id: number;
@@ -43,7 +48,8 @@ export const letterApi = apiSlice.injectEndpoints({
       query: () => '/stats',
       providesTags: ['Stats'],
     }),
-    getLetters: builder.query<{ success: boolean; count: number; letters: Letter[] }, GetLettersParams | void>({
+
+    getLetters: builder.query<{ success: boolean; count: number; letters: Letter[]; data?: Letter[] }, GetLettersParams | void>({
       query: (params) => {
         const queryParams = new URLSearchParams();
         if (params?.tab) queryParams.set('tab', params.tab);
@@ -51,18 +57,61 @@ export const letterApi = apiSlice.injectEndpoints({
         if (params?.priority) queryParams.set('priority', params.priority);
         if (params?.direction) queryParams.set('direction', params.direction);
         if (params?.search) queryParams.set('search', params.search);
+        if (params?.page) queryParams.set('page', String(params.page));
+        if (params?.limit) queryParams.set('limit', String(params.limit));
         return `/letters?${queryParams.toString()}`;
       },
       providesTags: ['Letters'],
     }),
+
+    getInboxLetters: builder.query<{ success: boolean; data: Letter[] }, { page?: number; limit?: number } | void>({
+      query: (params) => {
+        const q = new URLSearchParams();
+        if (params?.page) q.set('page', String(params.page));
+        if (params?.limit) q.set('limit', String(params.limit));
+        return `/letters/inbox?${q.toString()}`;
+      },
+      providesTags: ['Letters'],
+    }),
+
+    getOutboxLetters: builder.query<{ success: boolean; data: Letter[] }, { page?: number; limit?: number } | void>({
+      query: (params) => {
+        const q = new URLSearchParams();
+        if (params?.page) q.set('page', String(params.page));
+        if (params?.limit) q.set('limit', String(params.limit));
+        return `/letters/outbox?${q.toString()}`;
+      },
+      providesTags: ['Letters'],
+    }),
+
     getLetterById: builder.query<LetterDetailResponse, number>({
       query: (id) => `/letters/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Letter', id }],
     }),
+
+    getLetterTimeline: builder.query<{ success: boolean; data: any[] }, number>({
+      query: (id) => `/letters/${id}/timeline`,
+      providesTags: (_result, _error, id) => [{ type: 'Letter', id }],
+    }),
+
+    trackLetter: builder.query<{ success: boolean; data: any }, string>({
+      query: (trackingNumber) => `/letters/track/${trackingNumber}`,
+    }),
+
     createLetter: builder.mutation<
-      { success: boolean; letter_id: number; reference_no: string },
+      { success: boolean; letter_id: number; reference_no: string; data?: any },
       Omit<Partial<Letter>, 'attachments'> & {
         is_draft?: boolean;
+        source_type?: string;
+        letter_type?: string;
+        letter_condition?: string;
+        owning_directory_id?: number;
+        received_directory_id?: number;
+        received_by?: number;
+        signature_id?: number;
+        stamp_id?: number | null;
+        letter_date?: string;
+        response_due_at?: string;
         attachments?: Array<{
           filename: string;
           original_name: string;
@@ -80,6 +129,31 @@ export const letterApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ['Letters', 'Stats'],
     }),
+
+    receiveLetter: builder.mutation<{ success: boolean; message: string; data?: any }, number>({
+      query: (letterId) => ({
+        url: `/letters/${letterId}/receive`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => ['Letters', 'Stats', { type: 'Letter', id }],
+    }),
+
+    archiveLetter: builder.mutation<{ success: boolean; message: string; data?: any }, number>({
+      query: (letterId) => ({
+        url: `/letters/${letterId}/archive`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => ['Letters', 'Stats', { type: 'Letter', id }],
+    }),
+
+    closeLetter: builder.mutation<{ success: boolean; message: string; data?: any }, number>({
+      query: (letterId) => ({
+        url: `/letters/${letterId}/close`,
+        method: 'POST',
+      }),
+      invalidatesTags: (_result, _error, id) => ['Letters', 'Stats', { type: 'Letter', id }],
+    }),
+
     uploadFile: builder.mutation<
       { success: boolean; file: { filename: string; original_name: string; mime_type: string; file_size: number; url: string } },
       FormData
@@ -90,6 +164,7 @@ export const letterApi = apiSlice.injectEndpoints({
         body: formData,
       }),
     }),
+
     attachFilesToLetter: builder.mutation<
       { success: boolean; message: string; attachments: LetterAttachment[] },
       { id: number; formData: FormData }
@@ -101,6 +176,7 @@ export const letterApi = apiSlice.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Letter', id }, 'Audit'],
     }),
+
     executeLetterAction: builder.mutation<{ success: boolean; message: string }, ExecuteActionPayload>({
       query: (body) => ({
         url: `/letters/${body.id}/action`,
@@ -114,6 +190,7 @@ export const letterApi = apiSlice.injectEndpoints({
         { type: 'Letter', id },
       ],
     }),
+
     addLetterComment: builder.mutation<{ success: boolean; message: string }, { id: number; comment_text: string; comment_type?: string }>({
       query: ({ id, ...body }) => ({
         url: `/letters/${id}/comments`,
@@ -128,8 +205,15 @@ export const letterApi = apiSlice.injectEndpoints({
 export const {
   useGetStatsQuery,
   useGetLettersQuery,
+  useGetInboxLettersQuery,
+  useGetOutboxLettersQuery,
   useGetLetterByIdQuery,
+  useGetLetterTimelineQuery,
+  useTrackLetterQuery,
   useCreateLetterMutation,
+  useReceiveLetterMutation,
+  useArchiveLetterMutation,
+  useCloseLetterMutation,
   useUploadFileMutation,
   useAttachFilesToLetterMutation,
   useExecuteLetterActionMutation,
