@@ -20,6 +20,6 @@ export const apiSlice = createApi({
       return headers;
     },
   }),
-  tagTypes: ['Letters', 'Letter', 'Stats', 'Users', 'Directories', 'Audit', 'Conversations', 'Messages', 'Notifications'],
+  tagTypes: ['Letters', 'Letter', 'Stats', 'Users', 'Directories', 'Audit', 'Conversations', 'Messages', 'Notifications', 'Stamps', 'Signatures', 'Templates', 'Roles', 'Permissions'],
   endpoints: () => ({}),
 });

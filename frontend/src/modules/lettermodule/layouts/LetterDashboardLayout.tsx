@@ -26,6 +26,10 @@ import { DirectoriesManager } from '@/modules/directories/components/Directories
 import { UsersManager } from '@/modules/users/components/UsersManager';
 import { AuditLogViewer } from '@/modules/audit/components/AuditLogViewer';
 import { WebsiteCmsManager } from '@/modules/website/components/WebsiteCmsManager';
+import { StampsManager } from '@/modules/system/components/StampsManager';
+import { SignaturesManager } from '@/modules/system/components/SignaturesManager';
+import { TemplatesManager } from '@/modules/system/components/TemplatesManager';
+import { RolesPermissionsManager } from '@/modules/system/components/RolesPermissionsManager';
 import { useSocket } from '@/modules/messagemodule/hooks/useSocket';
 import { NotificationDropdown } from '@/modules/messagemodule/components/NotificationDropdown';
 import { StatusPill } from '../components/StatusPill';
@@ -62,6 +66,7 @@ import {
   ExternalLink,
   LogOut,
   MessageSquare,
+  Key,
 } from 'lucide-react';
 
 export type NavKey =
@@ -77,6 +82,10 @@ export type NavKey =
   | 'directories'
   | 'audit'
   | 'users'
+  | 'stamps'
+  | 'signatures'
+  | 'templates'
+  | 'roles'
   | 'settings';
 
 interface LetterSubjectCellProps {
@@ -293,6 +302,18 @@ export const LetterDashboardLayout: React.FC = () => {
   } else if (currentNav === 'audit') {
     pageTitle = 'System-Wide Cryptographic Audit Trail';
     pageSubtitle = 'Immutable government ledger recording all digital seals, minutes, and operations.';
+  } else if (currentNav === 'stamps') {
+    pageTitle = 'Official Stamps & Departmental Seals';
+    pageSubtitle = 'Manage authenticated zonal stamps, directorate seals, and cryptographic emblems.';
+  } else if (currentNav === 'signatures') {
+    pageTitle = 'Signatures & Cryptographic Keys';
+    pageSubtitle = 'Manage authenticated officer signatures, digital certificates, and endorsement tokens.';
+  } else if (currentNav === 'templates') {
+    pageTitle = 'Official Letterhead & Document Templates';
+    pageSubtitle = 'Standardized government stationery, ministerial circular formats, and presets.';
+  } else if (currentNav === 'roles') {
+    pageTitle = 'Role-Based Access Control (RBAC) & Permissions';
+    pageSubtitle = 'Configure system authorization matrix, granular privileges, and administrative policies.';
   } else if (currentNav === 'settings') {
     pageTitle = 'Public Website & Portal CMS';
     pageSubtitle = 'Manage public notices, citizen FAQs, and review incoming contact inquiries.';
@@ -1048,6 +1069,54 @@ export const LetterDashboardLayout: React.FC = () => {
                     >
                       <Users className="w-5 h-5 text-slate-500 flex-shrink-0" />
                       <span>Staff Accounts & Roles</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('stamps')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'stamps'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <ShieldCheck className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                      <span>Official Stamps &amp; Seals</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('signatures')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'signatures'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <Key className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                      <span>Signatures &amp; PKI Keys</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('templates')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'templates'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      <span>Document Templates</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('roles')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'roles'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <Shield className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      <span>Roles &amp; RBAC Permissions</span>
                     </button>
                     <button
                       type="button"
@@ -2497,9 +2566,10 @@ export const LetterDashboardLayout: React.FC = () => {
 
             {/* =============================================================
                 VIEW B: DEDICATED SUB-PAGE (Inbox, Sent, Drafts, Archives,
-                Endorsements, Supervisor Clearance, Directives, or Directory)
+                Endorsements, Supervisor Clearance, Directives, or Directory Letters)
                 ============================================================= */}
-            {currentNav !== 'dashboard' && currentNav !== 'users' && currentNav !== 'audit' && currentNav !== 'settings' && (
+            {(['inbox', 'sent', 'drafts', 'archived', 'endorsements', 'clearance', 'directives'].includes(currentNav) ||
+              (currentNav === 'directory' && selectedDirId !== null)) && (
               <div className="space-y-6">
                 {/* Sub-page Header Banner */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 bg-white p-6 rounded-2xl border shadow-sm">
@@ -2569,6 +2639,42 @@ export const LetterDashboardLayout: React.FC = () => {
               <UsersManager
                 onBackToDashboard={() => setCurrentNav('dashboard')}
                 directories={directories}
+              />
+            )}
+
+            {/* =============================================================
+                VIEW: OFFICIAL STAMPS & SEALS (Module 1 - STAMP)
+                ============================================================= */}
+            {currentNav === 'stamps' && (
+              <StampsManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+              />
+            )}
+
+            {/* =============================================================
+                VIEW: SIGNATURES & PKI KEYS (Module 1 - SIG)
+                ============================================================= */}
+            {currentNav === 'signatures' && (
+              <SignaturesManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+              />
+            )}
+
+            {/* =============================================================
+                VIEW: DOCUMENT TEMPLATES (Module 2 - TPL)
+                ============================================================= */}
+            {currentNav === 'templates' && (
+              <TemplatesManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
+              />
+            )}
+
+            {/* =============================================================
+                VIEW: ROLES & RBAC PERMISSIONS (Module 3 - RBAC)
+                ============================================================= */}
+            {currentNav === 'roles' && (
+              <RolesPermissionsManager
+                onBackToDashboard={() => setCurrentNav('dashboard')}
               />
             )}
 

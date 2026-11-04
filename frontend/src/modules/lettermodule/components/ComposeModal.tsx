@@ -3,6 +3,11 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import { useCreateLetterMutation, useUploadFileMutation } from '../services/letterApi';
+import {
+  useGetSignaturesQuery,
+  useGetStampsQuery,
+  useGetTemplatesQuery,
+} from '../services/securityAssetsApi';
 import { useGetDirectoriesQuery, useGetUsersQuery } from '@/modules/authmodule/services/authApi';
 import { useAppSelector } from '@/store';
 import { LetterPriority, LetterDirection } from '@/types/letter';
@@ -23,6 +28,9 @@ import {
   Loader2,
   UserCheck,
   Building2,
+  Key,
+  ShieldCheck,
+  Shield,
 } from 'lucide-react';
 
 interface UploadedAttachment {
@@ -70,6 +78,33 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   const [externalSenderOrg, setExternalSenderOrg] = useState('');
   const [externalSenderName, setExternalSenderName] = useState('');
   const [externalSenderRef, setExternalSenderRef] = useState('');
+
+  // Security Credentials & Assets (Signature, Stamp, Template)
+  const { data: signaturesData } = useGetSignaturesQuery();
+  const { data: stampsData } = useGetStampsQuery();
+  const { data: templatesData } = useGetTemplatesQuery();
+
+  const [selectedSignatureId, setSelectedSignatureId] = useState<number>(1);
+  const [selectedStampId, setSelectedStampId] = useState<number>(1);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
+
+  const signatures = signaturesData?.data && signaturesData.data.length > 0 ? signaturesData.data : [
+    { signature_id: 1, signature_reference: 'SIG-EXEC-9941 (Dr. Bezabih Alemu - Digital Key)', signature_type: 'digital_certificate' as const, is_active: true, signed_by: 1 },
+    { signature_id: 2, signature_reference: 'SIG-DIR-8812 (Eng. Yohannes Haile - Handwritten Stroke)', signature_type: 'handwritten_image' as const, is_active: true, signed_by: 2 },
+    { signature_id: 3, signature_reference: 'SIG-OFF-7721 (Civil Service Key Token)', signature_type: 'digital_certificate' as const, is_active: true, signed_by: 4 }
+  ];
+
+  const stamps = stampsData?.data && stampsData.data.length > 0 ? stampsData.data : [
+    { stamp_id: 1, stamp_name: 'Official Executive Department Seal (HZSITD Gold Seal)', directory_id: 1, is_active: true },
+    { stamp_id: 2, stamp_name: 'Software Directorate Authentication Stamp', directory_id: 2, is_active: true },
+    { stamp_id: 3, stamp_name: 'Infrastructure & Hardware Desk Verification Stamp', directory_id: 3, is_active: true }
+  ];
+
+  const templates = templatesData?.data && templatesData.data.length > 0 ? templatesData.data : [
+    { template_id: 1, template_name: 'Standard Outgoing Ministerial Circular', description: 'Formal inter-agency correspondence', is_active: true },
+    { template_id: 2, template_name: 'Executive Directive & Strategic Instruction Note', description: 'Priority departmental directive', is_active: true },
+    { template_id: 3, template_name: 'Inter-Directorate Technical Memorandum', description: 'Internal technical coordination format', is_active: true }
+  ];
 
   // Attachments
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
@@ -168,7 +203,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     formData.append('description', body.trim().slice(0, 160) || 'Official administrative correspondence');
     if (sourceType === 'generated') {
       formData.append('letter_content', body.trim() || '<p>Official Correspondence</p>');
-      formData.append('template_id', '1');
+      formData.append('template_id', String(selectedTemplateId));
     }
     formData.append('source_type', sourceType);
     formData.append('letter_type', computedLetterType);
@@ -176,8 +211,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     formData.append('owning_directory_id', String(owningDirId));
     formData.append('received_directory_id', String(targetDirId));
     formData.append('received_by', String(targetUserId));
-    formData.append('signature_id', '1');
-    formData.append('stamp_id', '1');
+    formData.append('signature_id', String(selectedSignatureId));
+    formData.append('stamp_id', String(selectedStampId));
     formData.append('letter_date', new Date().toISOString().split('T')[0]);
 
     const due = new Date();
@@ -688,6 +723,69 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   </span>
                 </label>
               ))}
+            </div>
+          </div>
+
+          {/* Official Endorsements & Security Assets Selectors */}
+          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Official Cryptographic Endorsement, Seal &amp; Stationery</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1">
+                  <Key className="w-3 h-3 text-purple-600" />
+                  <span>Digital Signature *</span>
+                </label>
+                <select
+                  value={selectedSignatureId}
+                  onChange={(e) => setSelectedSignatureId(Number(e.target.value))}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                >
+                  {signatures.map((s) => (
+                    <option key={s.signature_id} value={s.signature_id}>
+                      {s.signature_reference}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                  <span>Official Stamp / Seal *</span>
+                </label>
+                <select
+                  value={selectedStampId}
+                  onChange={(e) => setSelectedStampId(Number(e.target.value))}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                >
+                  {stamps.map((st) => (
+                    <option key={st.stamp_id} value={st.stamp_id}>
+                      {st.stamp_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1">
+                  <FileText className="w-3 h-3 text-blue-600" />
+                  <span>Document Template</span>
+                </label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
+                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                >
+                  {templates.map((t) => (
+                    <option key={t.template_id} value={t.template_id}>
+                      {t.template_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 

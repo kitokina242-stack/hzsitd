@@ -18,6 +18,12 @@ export interface ChatMessage {
   sender_id: number;
   sender_name?: string;
   sender_role?: string;
+  sender?: {
+    user_id: number;
+    first_name: string;
+    last_name: string;
+    email?: string;
+  };
   message_text: string;
   sent_at: string;
   edited_at?: string | null;

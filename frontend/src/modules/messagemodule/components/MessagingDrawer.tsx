@@ -143,20 +143,26 @@ export const MessagingDrawer: React.FC<MessagingDrawerProps> = ({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: remoteMessagesData } = useGetMessagesQuery(activeConvId, {
+  const {
+    data: remoteMessagesData,
+    isError: isRemoteMessagesError,
+    isSuccess: isRemoteMessagesSuccess
+  } = useGetMessagesQuery(activeConvId, {
     skip: !isOpen || !activeConvId
   });
 
-  // Load messages from remote or mock
+  // Load messages from remote (when API is reachable) or mock (when offline/error)
   useEffect(() => {
-    if (remoteMessagesData?.data && remoteMessagesData.data.length > 0) {
+    if (isRemoteMessagesSuccess && remoteMessagesData?.data) {
       setLocalMessages(remoteMessagesData.data);
-    } else if (MOCK_MESSAGES_MAP[activeConvId]) {
-      setLocalMessages(MOCK_MESSAGES_MAP[activeConvId]);
-    } else {
-      setLocalMessages([]);
+    } else if (isRemoteMessagesError) {
+      if (MOCK_MESSAGES_MAP[activeConvId]) {
+        setLocalMessages(MOCK_MESSAGES_MAP[activeConvId]);
+      } else {
+        setLocalMessages([]);
+      }
     }
-  }, [remoteMessagesData, activeConvId]);
+  }, [remoteMessagesData, isRemoteMessagesSuccess, isRemoteMessagesError, activeConvId]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -362,7 +368,7 @@ export const MessagingDrawer: React.FC<MessagingDrawerProps> = ({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold truncate text-slate-200">
-                          {conv.conversation_name}
+                          {conv.conversation_name || (conv.conversation_type === 'group' ? 'Executive Leadership Channel' : 'Direct Zonal Channel')}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 truncate mt-0.5">
@@ -381,10 +387,10 @@ export const MessagingDrawer: React.FC<MessagingDrawerProps> = ({
             <div className="px-5 py-3 border-b border-slate-800 bg-slate-900/60 flex items-center justify-between">
               <div>
                 <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <span>{activeConv?.conversation_name}</span>
+                  <span>{activeConv?.conversation_name || (activeConv?.conversation_type === 'group' ? 'Executive Communication Hub' : 'Direct Official Chat')}</span>
                 </h4>
                 <p className="text-[10px] text-slate-400 mt-0.5">
-                  Official Communication Channel &bull; Encrypted
+                  Official Communication Channel &bull; Encrypted &bull; Live Gateway
                 </p>
               </div>
             </div>
@@ -407,7 +413,11 @@ export const MessagingDrawer: React.FC<MessagingDrawerProps> = ({
                     >
                       <div className="flex items-center gap-1.5 mb-1 px-1">
                         <span className="text-[11px] font-semibold text-slate-300">
-                          {isMe ? 'You' : msg.sender_name || `Officer #${msg.sender_id}`}
+                          {isMe
+                            ? 'You'
+                            : msg.sender
+                            ? `${msg.sender.first_name} ${msg.sender.last_name}`
+                            : msg.sender_name || `Officer #${msg.sender_id}`}
                         </span>
                         {msg.sender_role && (
                           <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">
