@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Shield, Mail, Lock, User, Phone, BadgeCheck, AlertCircle, ArrowLeft, ArrowRight, Clock } from 'lucide-react';
+import { Mail, Lock, User, Phone, AlertCircle, ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRegisterMutation } from '@/modules/authmodule/services/authApi';
 
 export const RegisterPage: React.FC = () => {
@@ -15,7 +15,7 @@ export const RegisterPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  
+
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [registeredUser, setRegisteredUser] = useState<any | null>(null);
 
@@ -40,7 +40,7 @@ export const RegisterPage: React.FC = () => {
         email,
         employee_number: employeeNumber ? employeeNumber : undefined,
         phone: phone ? phone : undefined,
-        password
+        password,
       }).unwrap();
 
       if (response.success && response.data) {
@@ -56,7 +56,7 @@ export const RegisterPage: React.FC = () => {
       } else if (code === 'EMPLOYEE_NUMBER_ALREADY_EXISTS') {
         setErrorMessage('This employee number is already assigned to an existing user.');
       } else {
-        // For development fallback when backend is offline
+        // Fallback for demo preview
         setRegisteredUser({
           user_id: Math.floor(Math.random() * 900) + 100,
           employee_number: employeeNumber || `EMP-${Math.floor(Math.random() * 9000) + 1000}`,
@@ -65,264 +65,251 @@ export const RegisterPage: React.FC = () => {
           email,
           phone: phone || '+251911000000',
           account_status: 'pending',
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
         });
       }
     }
   };
 
-  // If registered successfully, show "Account Pending Approval" screen
-  if (registeredUser) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
-        <div className="sm:mx-auto sm:w-full sm:max-w-lg z-10">
-          <div className="bg-slate-800/90 backdrop-blur-xl py-10 px-6 shadow-2xl ring-1 ring-white/10 rounded-2xl sm:px-10 border border-slate-700/60 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 mx-auto flex items-center justify-center mb-5 shadow-lg shadow-amber-500/10">
-              <Clock className="w-8 h-8 animate-pulse" />
-            </div>
-
-            <div className="inline-block px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-3">
-              Account Status: Pending Approval
-            </div>
-
-            <h2 className="text-2xl font-bold text-white tracking-tight">
-              Registration Successful!
-            </h2>
-
-            <p className="mt-3 text-sm text-slate-300 leading-relaxed max-w-sm mx-auto">
-              Welcome, <span className="text-white font-semibold">{registeredUser.first_name} {registeredUser.last_name}</span>. Your account profile has been logged in the government directory.
-            </p>
-
-            <div className="mt-6 p-4 rounded-xl bg-slate-900/70 border border-slate-700/60 text-left space-y-2 text-xs">
-              <div className="flex justify-between text-slate-400">
-                <span>Employee / Staff ID:</span>
-                <span className="font-mono text-emerald-400 font-semibold">{registeredUser.employee_number || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Registered Email:</span>
-                <span className="text-slate-200">{registeredUser.email}</span>
-              </div>
-              <div className="flex justify-between text-slate-400">
-                <span>Verification State:</span>
-                <span className="text-amber-400 font-semibold capitalize">{registeredUser.account_status}</span>
-              </div>
-            </div>
-
-            <div className="mt-6 p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs text-left">
-              <p className="font-medium text-blue-200">Next Steps:</p>
-              <p className="mt-1 text-slate-400 leading-relaxed">
-                As per official security protocol, a System Administrator must verify your department credentials and assign your directory permissions before you can log in.
-              </p>
-            </div>
-
-            <div className="mt-8">
-              <Link
-                href="/login"
-                className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 transition-all shadow-lg shadow-emerald-600/20"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Return to Sign In</span>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
-      <div className="sm:mx-auto sm:w-full sm:max-w-xl text-center z-10">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-500/20 mb-3 ring-1 ring-white/20">
-          <Shield className="w-7 h-7 text-white stroke-[2.2]" />
-        </div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">
-          Civil Servant & Officer Registration
-        </h2>
-        <p className="mt-1 text-xs text-slate-400">
-          HZSITD Official Electronic Document & Letter Management Portal
-        </p>
+    <div className="min-h-screen bg-[#f4f6f8] border-t-4 border-[#c1ff72] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans antialiased text-slate-800">
+      {/* Return to website link */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-[520px] mb-4">
+        <Link
+          href="/html/index.html"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Return to Public Portal</span>
+        </Link>
       </div>
 
-      <div className="mt-6 sm:mx-auto sm:w-full sm:max-w-xl z-10">
-        <div className="bg-slate-800/80 backdrop-blur-xl py-8 px-6 shadow-2xl ring-1 ring-white/10 rounded-2xl sm:px-10 border border-slate-700/50">
-          {errorMessage && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex gap-2.5 items-center animate-fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{errorMessage}</span>
+      <div className="sm:mx-auto sm:w-full sm:max-w-[520px]">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-8 sm:p-10">
+          {/* Logo & Header */}
+          <div className="text-center mb-8">
+            <Link href="/html/index.html" className="inline-block mb-3">
+              <img
+                src="/assets/images/logos/dosit-logo-animated.svg"
+                alt="DOSIT HZSITD Logo"
+                className="h-14 w-auto mx-auto object-contain"
+              />
+            </Link>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+              Civil Service Staff Onboarding
             </div>
-          )}
+            <h1 className="text-xl font-bold text-slate-900 mt-1 tracking-tight">
+              Request Staff Registration
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Hadiya Zone Science & Information Technology Department
+            </p>
+          </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Registration Success Screen */}
+          {registeredUser ? (
+            <div className="p-6 bg-emerald-50 border border-emerald-200 rounded-2xl text-center space-y-4 animate-in fade-in">
+              <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  First Name *
-                </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="e.g. Abebe"
-                    required
-                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
+                <h3 className="text-base font-bold text-emerald-950">Registration Request Submitted</h3>
+                <p className="text-xs text-emerald-800 mt-1">
+                  Your civil servant profile has been registered with status{' '}
+                  <span className="font-semibold uppercase tracking-wider px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded">
+                    Pending Approval
+                  </span>.
+                </p>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Last Name *
-                </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <User className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="e.g. Kebede"
-                    required
-                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
+              <div className="bg-white p-4 rounded-xl border border-emerald-200/80 text-left text-xs space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Applicant Name:</span>
+                  <span className="font-semibold text-slate-900">
+                    {registeredUser.first_name} {registeredUser.last_name}
+                  </span>
                 </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Official Email:</span>
+                  <span className="font-mono text-slate-800">{registeredUser.email}</span>
+                </div>
+                {registeredUser.employee_number && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Employee ID:</span>
+                    <span className="font-mono text-slate-800">{registeredUser.employee_number}</span>
+                  </div>
+                )}
+              </div>
+
+              <p className="text-[11px] text-slate-500">
+                A system administrator or department director will verify your employment records and assign your directorate role before activation.
+              </p>
+
+              <div className="pt-2">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-5 rounded-full text-sm font-semibold text-white bg-[#161a23] hover:bg-[#070a12] transition-colors"
+                >
+                  <span>Go to Staff Login</span>
+                  <ArrowRight className="w-4 h-4 text-[#c1ff72]" />
+                </Link>
               </div>
             </div>
+          ) : (
+            <>
+              {errorMessage && (
+                <div className="mb-6 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Official Email *
-                </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="h-4 w-4" />
+              {/* Registration Form with Clean Underline Inputs */}
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="e.g. Yohannes"
+                      required
+                      className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
+                    />
                   </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="e.g. Haile"
+                      required
+                      className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                    Official Email Address
+                  </label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.gov.et"
+                    placeholder="name@hzsitd.gov.et"
                     required
-                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Employee Number
-                </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <BadgeCheck className="h-4 w-4" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Employee ID <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={employeeNumber}
+                      onChange={(e) => setEmployeeNumber(e.target.value)}
+                      placeholder="EMP-1024"
+                      className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
+                    />
                   </div>
-                  <input
-                    type="text"
-                    value={employeeNumber}
-                    onChange={(e) => setEmployeeNumber(e.target.value)}
-                    placeholder="EMP-1029"
-                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Phone Number
-              </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Phone className="h-4 w-4" />
-                </div>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+251 91 100 0000"
-                  className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Password *
-                </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="h-4 w-4" />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Phone Number <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+251 9..."
+                      className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
+                    />
                   </div>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min. 8 characters"
-                    required
-                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                  Confirm Password *
-                </label>
-                <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                    <Lock className="h-4 w-4" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Min 8 chars"
+                      required
+                      className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
+                    />
                   </div>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    required
-                    className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                      Confirm
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repeat password"
+                      required
+                      className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
+                    />
+                  </div>
                 </div>
+
+                <p className="text-[11px] text-slate-500 leading-relaxed pt-1">
+                  By submitting this request, you agree to comply with the{' '}
+                  <Link href="/html/terms-and-conditions.html" className="text-slate-900 underline">
+                    HZSITD Terms of Use
+                  </Link>{' '}
+                  and public service confidentiality regulations.
+                </p>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full text-sm font-semibold text-white bg-[#161a23] hover:bg-[#070a12] active:scale-[0.99] transition-all shadow-md shadow-slate-900/10 disabled:opacity-60 cursor-pointer"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Submitting to Government Server...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Submit Registration Request</span>
+                        <ArrowRight className="w-4 h-4 text-[#c1ff72]" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-6 text-center pt-5 border-t border-slate-100">
+                <p className="text-xs text-slate-500">
+                  Already have an active staff account?{' '}
+                  <Link href="/login" className="font-semibold text-slate-900 hover:underline">
+                    Login to Staff Portal
+                  </Link>
+                </p>
               </div>
-            </div>
-
-            <div className="pt-3">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-60 cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Registering Account...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Submit Account for Approval</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          <div className="mt-6 text-center pt-4 border-t border-slate-700/60">
-            <p className="text-xs text-slate-400">
-              Already have an active account?{' '}
-              <Link href="/login" className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">
-                Sign In
-              </Link>
-            </p>
-          </div>
+            </>
+          )}
         </div>
+
+        <p className="text-center text-[11px] text-slate-400 mt-6">
+          © 2025 Hadiya Zone Science & Information Technology Department. All rights reserved.
+        </p>
       </div>
     </div>
   );
 };
-export default RegisterPage;

@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Shield, Lock, Mail, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowRight, UserCheck, Sparkles } from 'lucide-react';
+import Image from 'next/image';
+import { Lock, Mail, Eye, EyeOff, AlertCircle, ArrowRight, ArrowLeft, CheckCircle2, Sparkles } from 'lucide-react';
 import { useAppDispatch } from '@/store';
 import { setCredentials, switchPresetUser, PRESET_GOVERNMENT_USERS } from '@/modules/authmodule/features/authSlice';
 import { useLoginMutation, useLazyGetMeQuery } from '@/modules/authmodule/services/authApi';
@@ -27,13 +28,13 @@ export const LoginPage: React.FC = () => {
     setPendingNotice(false);
 
     if (!email || !password) {
-      setErrorMessage('Please enter both email and password.');
+      setErrorMessage('Please enter both your official email address and password.');
       return;
     }
 
     try {
       const response = await loginApi({ email, password }).unwrap();
-      
+
       if (response.success && response.data?.access_token) {
         const token = response.data.access_token;
         const refreshToken = response.data.refresh_token;
@@ -44,56 +45,59 @@ export const LoginPage: React.FC = () => {
           if (meRes.success && meRes.data?.user) {
             const u = meRes.data.user;
             const primaryRoleAssignment = meRes.data.role_assignments?.[0];
-            
-            // Map role ID to UserRole string
+
             let mappedRole: UserRole = 'Officer';
             if (primaryRoleAssignment?.role_id === 1) mappedRole = 'System Admin';
             else if (primaryRoleAssignment?.role_id === 2) mappedRole = 'Department Head';
             else if (primaryRoleAssignment?.role_id === 3) mappedRole = 'Directory Lead';
 
-            dispatch(setCredentials({
+            dispatch(
+              setCredentials({
+                token,
+                refreshToken,
+                user: {
+                  id: u.user_id,
+                  user_id: u.user_id,
+                  employee_number: u.employee_number,
+                  first_name: u.first_name,
+                  last_name: u.last_name,
+                  full_name: `${u.first_name} ${u.last_name}`.trim(),
+                  username: u.email.split('@')[0],
+                  email: u.email,
+                  phone: u.phone,
+                  role: mappedRole,
+                  directory_id: primaryRoleAssignment?.directory_id || 1,
+                  position_title: primaryRoleAssignment?.role_name || `${mappedRole}`,
+                  account_status: u.account_status as any,
+                  role_assignments: meRes.data.role_assignments,
+                  permissions: meRes.data.permissions,
+                  avatar_url: '/assets/images/profile/user-1.jpg',
+                },
+              })
+            );
+          }
+        } catch {
+          // Graceful fallback user state with authenticated token
+          const isAdmin = email.toLowerCase().includes('admin');
+          dispatch(
+            setCredentials({
               token,
               refreshToken,
               user: {
-                id: u.user_id,
-                user_id: u.user_id,
-                employee_number: u.employee_number,
-                first_name: u.first_name,
-                last_name: u.last_name,
-                full_name: `${u.first_name} ${u.last_name}`.trim(),
-                username: u.email.split('@')[0],
-                email: u.email,
-                phone: u.phone,
-                role: mappedRole,
-                directory_id: primaryRoleAssignment?.directory_id || 1,
-                position_title: primaryRoleAssignment?.role_name || `${mappedRole}`,
-                account_status: u.account_status as any,
-                role_assignments: meRes.data.role_assignments,
-                permissions: meRes.data.permissions,
-                avatar_url: '/assets/images/profile/user-1.jpg'
-              }
-            }));
-          }
-        } catch {
-          // Fallback user state with token
-          const isAdmin = email.toLowerCase().includes('admin');
-          dispatch(setCredentials({
-            token,
-            refreshToken,
-            user: {
-              id: 1,
-              user_id: 1,
-              full_name: isAdmin ? 'System Administrator' : email.split('@')[0],
-              username: email.split('@')[0],
-              email,
-              role: isAdmin ? 'System Admin' : 'Officer',
-              position_title: isAdmin ? 'System Administrator' : 'Government Officer',
-              directory_id: 1,
-              directory_name: 'Executive Office',
-              account_status: 'active',
-              avatar_url: '/assets/images/profile/user-1.jpg'
-            }
-          }));
+                id: 1,
+                user_id: 1,
+                full_name: isAdmin ? 'System Administrator' : email.split('@')[0],
+                username: email.split('@')[0],
+                email,
+                role: isAdmin ? 'System Admin' : 'Officer',
+                position_title: isAdmin ? 'System Administrator' : 'Government Officer',
+                directory_id: 1,
+                directory_name: 'Executive Office',
+                account_status: 'active',
+                avatar_url: '/assets/images/profile/user-1.jpg',
+              },
+            })
+          );
         }
 
         router.push('/dashboard');
@@ -105,228 +109,245 @@ export const LoginPage: React.FC = () => {
 
       if (errorCode === 'ACCOUNT_NOT_ACTIVE') {
         setPendingNotice(true);
-        setErrorMessage('Account Pending Verification: Your account has been registered but is awaiting administrator activation.');
-      } else if (errorCode === 'INVALID_CREDENTIALS' || err?.status === 401) {
-        setErrorMessage('Invalid credentials: The email or password entered is incorrect.');
+      } else if (errorCode === 'INVALID_CREDENTIALS') {
+        setErrorMessage('Invalid official email or password. Please verify your credentials and try again.');
       } else {
-        setErrorMessage(errorMsg || 'Unable to connect to the authentication server. You can also use quick demo personas below for offline testing.');
+        setErrorMessage(errorMsg || 'Unable to authenticate with government server. Check your network or credentials.');
       }
     }
   };
 
-  const handleQuickDemoLogin = (personaKey: keyof typeof PRESET_GOVERNMENT_USERS) => {
-    dispatch(switchPresetUser(personaKey));
+  const handleQuickAutofill = (seedEmail: string, seedPass: string) => {
+    setEmail(seedEmail);
+    setPassword(seedPass);
+    setErrorMessage(null);
+  };
+
+  const handleQuickDemoLogin = (presetKey: keyof typeof PRESET_GOVERNMENT_USERS) => {
+    dispatch(switchPresetUser(presetKey));
     router.push('/dashboard');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-850 to-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans relative overflow-hidden">
-      {/* Background ambient lighting */}
-      <div className="absolute top-0 -left-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-0 -right-40 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Header / Logo */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-xl shadow-emerald-500/20 mb-4 ring-1 ring-white/20">
-          <Shield className="w-8 h-8 text-white stroke-[2.2]" />
-        </div>
-        <div className="inline-block px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold tracking-wider uppercase mb-2">
-          Federal Democratic Republic of Ethiopia
-        </div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">
-          HZSITD Executive Portal
-        </h2>
-        <p className="mt-1 text-sm text-slate-400">
-          Hadiya Zone Science & Information Technology Department
-        </p>
+    <div className="min-h-screen bg-[#f4f6f8] border-t-4 border-[#c1ff72] flex flex-col justify-center py-10 px-4 sm:px-6 lg:px-8 font-sans antialiased text-slate-800">
+      {/* Top Navigation Back Link */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-[480px] mb-4">
+        <Link
+          href="/html/index.html"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Return to Public Portal</span>
+        </Link>
       </div>
 
-      {/* Main Form Card */}
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
-        <div className="bg-slate-800/80 backdrop-blur-xl py-8 px-6 shadow-2xl ring-1 ring-white/10 sm:rounded-2xl sm:px-10 border border-slate-700/50">
-          <div className="mb-6 pb-4 border-b border-slate-700/60">
-            <h3 className="text-lg font-semibold text-white">Sign In to Command Center</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Enter your official credentials to access letters and directives</p>
+      {/* Main Sign-In Card matching the website's original design */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-[480px]">
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-8 sm:p-10">
+          {/* Official Department Logo Header */}
+          <div className="text-center mb-8">
+            <Link href="/html/index.html" className="inline-block mb-3">
+              <img
+                src="/assets/images/logos/dosit-logo-animated.svg"
+                alt="DOSIT HZSITD Logo"
+                className="h-14 w-auto mx-auto object-contain"
+              />
+            </Link>
+            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
+              Federal Democratic Republic of Ethiopia
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 mt-1 tracking-tight">
+              Command Center & Letter Portal
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Hadiya Zone Science & Information Technology Department
+            </p>
           </div>
+
+          {/* Error Notice */}
+          {errorMessage && (
+            <div className="mb-6 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-xs text-red-700 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           {/* Pending Approval Notice */}
           {pendingNotice && (
-            <div className="mb-5 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex gap-3 items-start animate-fade-in">
-              <AlertCircle className="w-5 h-5 shrink-0 text-amber-400 mt-0.5" />
+            <div className="mb-6 p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-xs text-amber-800 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-semibold text-amber-200">Account Pending Verification</p>
-                <p className="mt-0.5 text-amber-300/90 leading-relaxed">
-                  Your registration request is currently in queue. A System Administrator must assign your directory role before you can sign in.
+                <p className="font-semibold">Account Pending Approval</p>
+                <p className="mt-0.5 text-amber-700">
+                  Your registration request is submitted. An administrator must activate your role before you can sign in.
                 </p>
               </div>
             </div>
           )}
 
-          {/* Error Message */}
-          {errorMessage && !pendingNotice && (
-            <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex gap-2.5 items-center animate-fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          {/* Login Form with Clean Underline Inputs */}
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Official Email Address
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Official Staff Email
               </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Mail className="h-4 w-4" />
-                </div>
+              <div className="relative">
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@hzsitd.gov.et"
                   required
-                  className="block w-full pl-10 pr-3.5 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
                   Password
                 </label>
-                <span className="text-[11px] text-slate-500 hover:text-emerald-400 cursor-pointer transition-colors">
-                  Need help?
-                </span>
+                <button
+                  type="button"
+                  onClick={() => alert('Please contact the System Administrator or Executive Office to reset your official password.')}
+                  className="text-[11px] text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  Forgot Password?
+                </button>
               </div>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <Lock className="h-4 w-4" />
-                </div>
+              <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
+                  placeholder="Enter your password"
                   required
-                  className="block w-full pl-10 pr-10 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
+                  className="w-full bg-transparent border-0 border-b-2 border-slate-200 focus:border-slate-900 focus:ring-0 py-2 pr-8 text-sm text-slate-900 placeholder:text-slate-400 font-sans transition-colors"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-white transition-colors"
+                  className="absolute right-1 top-2.5 text-slate-400 hover:text-slate-700 transition-colors"
+                  aria-label="Toggle password visibility"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
+            {/* Submit Button in Official Dark Style */}
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-lg shadow-emerald-600/30 transition-all disabled:opacity-60 cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-3 px-6 rounded-full text-sm font-semibold text-white bg-[#161a23] hover:bg-[#070a12] active:scale-[0.99] transition-all shadow-md shadow-slate-900/10 disabled:opacity-60 cursor-pointer"
               >
                 {isLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Authenticating...</span>
+                    <span>Verifying with Government Server...</span>
                   </>
                 ) : (
                   <>
-                    <span>Sign In to Portal</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span>Login to Portal</span>
+                    <ArrowRight className="w-4 h-4 text-[#c1ff72]" />
                   </>
                 )}
               </button>
             </div>
           </form>
 
-          {/* Register Link */}
-          <div className="mt-6 text-center pt-4 border-t border-slate-700/60">
-            <p className="text-xs text-slate-400">
-              New civil servant or staff member?{' '}
-              <Link href="/register" className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">
-                Register an Account
+          {/* Registration Link */}
+          <div className="mt-6 text-center pt-5 border-t border-slate-100">
+            <p className="text-xs text-slate-500">
+              Need a civil servant account?{' '}
+              <Link href="/register" className="font-semibold text-slate-900 hover:underline">
+                Request Staff Registration
               </Link>
             </p>
           </div>
 
-          {/* Live Backend Seed Credentials Quick Autofill */}
-          <div className="mt-6 pt-5 border-t border-slate-700/60">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Live Backend Seed Account
+          {/* Live Backend Seed Credentials Quick Access */}
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                Live Render Backend Seed Data
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">Render API</span>
+              <span className="text-[10px] text-slate-400 font-mono">Official Integration</span>
             </div>
             <button
               type="button"
-              onClick={() => {
-                setEmail('admin@example.gov.et');
-                setPassword('ChangeMe#12345');
-              }}
-              className="w-full text-left p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 hover:border-emerald-400 transition-all cursor-pointer group flex items-center justify-between"
+              onClick={() => handleQuickAutofill('admin@example.gov.et', 'ChangeMe#12345')}
+              className="w-full text-left p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-all cursor-pointer group flex items-center justify-between"
             >
               <div>
-                <div className="text-xs font-semibold text-emerald-200 group-hover:text-white flex items-center gap-2">
+                <div className="text-xs font-semibold text-slate-900 group-hover:text-emerald-700 flex items-center gap-2">
                   <span>admin@example.gov.et</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-medium">Ready</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">
+                    Autofill
+                  </span>
                 </div>
-                <div className="text-[11px] text-slate-400 font-mono mt-0.5">Password: ChangeMe#12345 (Click to Autofill)</div>
+                <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                  Password: <span className="text-slate-700">ChangeMe#12345</span>
+                </div>
               </div>
-              <ArrowRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+              <div className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:text-slate-900 group-hover:border-slate-400 transition-colors">
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
             </button>
           </div>
 
-          {/* One-Click Quick Testing Personas */}
-          <div className="mt-4 pt-4 border-t border-slate-700/60">
-            <div className="flex items-center gap-1.5 mb-2.5 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-              <span>Offline / Demo Personas</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('dr_bezabih')}
-                className="text-left p-2 rounded-lg bg-slate-900/60 hover:bg-slate-700/70 border border-slate-700/50 hover:border-emerald-500/40 transition-all cursor-pointer group"
-              >
-                <div className="text-xs font-semibold text-slate-200 group-hover:text-emerald-300 truncate">Dr. Bezabih Alemu</div>
-                <div className="text-[10px] text-emerald-400">Dept Head (Seal & Sign)</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('eng_yohannes')}
-                className="text-left p-2 rounded-lg bg-slate-900/60 hover:bg-slate-700/70 border border-slate-700/50 hover:border-emerald-500/40 transition-all cursor-pointer group"
-              >
-                <div className="text-xs font-semibold text-slate-200 group-hover:text-emerald-300 truncate">Eng. Yohannes Haile</div>
-                <div className="text-[10px] text-blue-400">Directory Lead</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('almaz_t')}
-                className="text-left p-2 rounded-lg bg-slate-900/60 hover:bg-slate-700/70 border border-slate-700/50 hover:border-emerald-500/40 transition-all cursor-pointer group"
-              >
-                <div className="text-xs font-semibold text-slate-200 group-hover:text-emerald-300 truncate">Almaz Tesfaye</div>
-                <div className="text-[10px] text-amber-400">Officer (Dispatch)</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickDemoLogin('admin_solomon')}
-                className="text-left p-2 rounded-lg bg-slate-900/60 hover:bg-slate-700/70 border border-slate-700/50 hover:border-emerald-500/40 transition-all cursor-pointer group"
-              >
-                <div className="text-xs font-semibold text-slate-200 group-hover:text-emerald-300 truncate">Solomon Bekele</div>
-                <div className="text-[10px] text-purple-400">System Admin</div>
-              </button>
-            </div>
+          {/* Quick Offline Personas (Discreet bottom helper) */}
+          <div className="mt-4 pt-3 text-center">
+            <details className="text-left text-xs text-slate-400 group">
+              <summary className="cursor-pointer text-[11px] font-medium text-slate-400 hover:text-slate-600 list-none text-center">
+                ⚙ Offline Testing Personas (Demo Mode)
+              </summary>
+              <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin('dr_bezabih')}
+                  className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-colors"
+                >
+                  <div className="text-xs font-semibold text-slate-800 truncate">Dr. Bezabih Alemu</div>
+                  <div className="text-[10px] text-emerald-600">Dept Head (Seal & Sign)</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin('eng_yohannes')}
+                  className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-colors"
+                >
+                  <div className="text-xs font-semibold text-slate-800 truncate">Eng. Yohannes Haile</div>
+                  <div className="text-[10px] text-blue-600">Directory Lead</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin('almaz_t')}
+                  className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-colors"
+                >
+                  <div className="text-xs font-semibold text-slate-800 truncate">Almaz Tesfaye</div>
+                  <div className="text-[10px] text-amber-600">Officer (Dispatch)</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin('admin_solomon')}
+                  className="p-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left transition-colors"
+                >
+                  <div className="text-xs font-semibold text-slate-800 truncate">Solomon Bekele</div>
+                  <div className="text-[10px] text-purple-600">System Admin</div>
+                </button>
+              </div>
+            </details>
           </div>
         </div>
+
+        {/* Footer Copyright */}
+        <p className="text-center text-[11px] text-slate-400 mt-6">
+          © 2025 Hadiya Zone Science & Information Technology Department. All rights reserved.
+        </p>
       </div>
     </div>
   );
 };
-export default LoginPage;
