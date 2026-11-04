@@ -146,11 +146,11 @@ export const LoginPage: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/70 border border-slate-200/80 p-8 sm:p-10">
           {/* Official Department Logo Header */}
           <div className="text-center mb-8">
-            <Link href="/html/index.html" className="inline-block mb-3">
+            <Link href="/html/index.html" className="inline-block mb-3 group" title="Return to Public Portal">
               <img
-                src="/assets/images/logos/dosit-logo-animated.svg"
-                alt="DOSIT HZSITD Logo"
-                className="h-14 w-auto mx-auto object-contain"
+                src="/assets/images/logos/official-hzsitd-logo.svg"
+                alt="Federal Democratic Republic of Ethiopia - HZSITD DOSIT Official Emblem"
+                className="h-20 sm:h-22 w-auto mx-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-sm"
               />
             </Link>
             <div className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
