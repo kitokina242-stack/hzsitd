@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Users, UserPlus, Search, Shield, ArrowLeft, CheckCircle2, AlertCircle, X, Lock, Key, Mail, Building, Check, Ban } from 'lucide-react';
+import { Users, UserPlus, Search, Shield, ArrowLeft, CheckCircle2, AlertCircle, X, Lock, Key, Mail, Building, Check, Ban, Phone } from 'lucide-react';
 import { User, Directory, UserRole, AccountStatus } from '@/types/auth';
 import {
   useGetAdminUsersListQuery,
@@ -10,6 +10,7 @@ import {
   useResetUserPasswordByAdminMutation
 } from '../services/userManagementApi';
 import { useGetDirectoriesListQuery } from '@/modules/directories/services/directoryApi';
+import { useAppSelector } from '@/store';
 
 interface UsersManagerProps {
   onBackToDashboard: () => void;
@@ -103,6 +104,9 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   onBackToDashboard,
   directories
 }) => {
+  const activeRole = useAppSelector((state) => state.auth.activeRole);
+  const isAdmin = activeRole === 'System Admin';
+
   const { data: remoteData } = useGetAdminUsersListQuery();
   const [createUserApi, { isLoading: isCreating }] = useCreateAdminUserMutation();
   const [setUserStatusApi] = useSetUserStatusMutation();
@@ -111,6 +115,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   const [localStaff, setLocalStaff] = useState<User[]>(DEFAULT_STAFF);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Reset Password Modal
@@ -251,16 +256,19 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       (u.employee_number && u.employee_number.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus =
-      statusFilter === 'all' || u.account_status === statusFilter;
+      isAdmin ? (statusFilter === 'all' || u.account_status === statusFilter) : true;
 
-    return matchesSearch && matchesStatus;
+    const matchesRole =
+      !isAdmin ? (roleFilter === 'all' || u.role === roleFilter) : true;
+
+    return matchesSearch && matchesStatus && matchesRole;
   });
 
   const pendingCount = staffList.filter((u) => u.account_status === 'pending').length;
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
-      {/* Top Header Card */}
+      {/* Top Header Card (Role-Adaptive: Executive Directory vs IT RBAC) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-white border border-slate-200 rounded-2xl shadow-sm">
         <div>
           <button
@@ -272,48 +280,88 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
             <span>Back to Dashboard Overview</span>
           </button>
           <h1 className="font-serif-executive text-2xl sm:text-3xl text-slate-900 flex items-center gap-2.5">
-            <Users className="w-7 h-7 text-emerald-600" />
-            <span>Staff Directory &amp; RBAC Clearance</span>
+            {isAdmin ? (
+              <Shield className="w-7 h-7 text-purple-600" />
+            ) : (
+              <Users className="w-7 h-7 text-emerald-600" />
+            )}
+            <span>
+              {isAdmin
+                ? 'Staff Accounts & Access Management (RBAC)'
+                : 'Departmental Staff Directory & Leadership Roster'}
+            </span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage civil servants, role permissions, approval states, and zonal credentials.
+            {isAdmin
+              ? 'Manage civil servants, role permissions, approval states, and zonal credentials.'
+              : 'Official roster of civil servants, leadership assignments, and departmental contact coordinates.'}
           </p>
         </div>
 
         <div className="flex items-center gap-3">
-          {pendingCount > 0 && (
-            <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
-              {pendingCount} Pending Approval
+          {isAdmin ? (
+            <>
+              {pendingCount > 0 && (
+                <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
+                  {pendingCount} Pending Approval
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition shadow-sm cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Provision User Account</span>
+              </button>
+            </>
+          ) : (
+            <span className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {staffList.length} Registered Civil Servants
             </span>
           )}
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Create User Account</span>
-          </button>
         </div>
       </div>
 
       {/* Filter Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 overflow-x-auto">
-          {['all', 'active', 'pending', 'suspended'].map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-colors cursor-pointer ${
-                statusFilter === tab
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              {tab === 'all' ? 'All Personnel' : tab}
-            </button>
-          ))}
+          {isAdmin ? (
+            ['all', 'active', 'pending', 'suspended'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setStatusFilter(tab)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition-colors cursor-pointer ${
+                  statusFilter === tab
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {tab === 'all' ? 'All Personnel' : tab}
+              </button>
+            ))
+          ) : (
+            [
+              { id: 'all', label: 'All Ranks' },
+              { id: 'Department Head', label: 'Executive Head' },
+              { id: 'Directory Lead', label: 'Directory Leads' },
+              { id: 'Officer', label: 'Officers' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setRoleFilter(tab.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                  roleFilter === tab.id
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))
+          )}
         </div>
 
         <div className="relative w-full sm:w-80">
@@ -397,9 +445,30 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                 </div>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons: Role-Adaptive (Quick Contact for Executive/Staff vs IT Admin Actions) */}
               <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                {isPending ? (
+                {!isAdmin ? (
+                  <>
+                    <a
+                      href={`mailto:${user.email}`}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 transition"
+                      title={`Send official email to ${user.email}`}
+                    >
+                      <Mail className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600" />
+                      <span>Official Email</span>
+                    </a>
+                    {user.phone && (
+                      <a
+                        href={`tel:${user.phone.replace(/\s+/g, '')}`}
+                        className="inline-flex items-center justify-center py-1.5 px-3 rounded-lg text-xs font-semibold bg-slate-50 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 transition gap-1.5"
+                        title={`Call ${user.phone}`}
+                      >
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Call</span>
+                      </a>
+                    )}
+                  </>
+                ) : isPending ? (
                   <button
                     type="button"
                     onClick={() => handleToggleStatus(user, 'active')}

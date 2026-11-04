@@ -45,7 +45,7 @@ export interface ExecuteActionPayload {
 export const letterApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getStats: builder.query<{ success: boolean; stats: DashboardStats }, void>({
-      query: () => '/stats',
+      query: () => '/letters/stats',
       providesTags: ['Stats'],
     }),
 
@@ -99,8 +99,8 @@ export const letterApi = apiSlice.injectEndpoints({
     }),
 
     createLetter: builder.mutation<
-      { success: boolean; letter_id: number; reference_no: string; data?: any },
-      Omit<Partial<Letter>, 'attachments'> & {
+      { success: boolean; letter_id?: number; tracking_number?: string; reference_no?: string; data?: any },
+      FormData | (Omit<Partial<Letter>, 'attachments'> & {
         is_draft?: boolean;
         source_type?: string;
         letter_type?: string;
@@ -120,7 +120,7 @@ export const letterApi = apiSlice.injectEndpoints({
           url?: string;
           file_path?: string;
         }>;
-      }
+      })
     >({
       query: (body) => ({
         url: '/letters',

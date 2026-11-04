@@ -160,7 +160,7 @@ export const LetterDashboardLayout: React.FC = () => {
 
   // RBAC permissions for System Governance
   const canAccessAudit = activeRole === 'System Admin' || activeRole === 'Department Head';
-  const canAccessUsers = activeRole === 'System Admin' || activeRole === 'Department Head';
+  const canAccessUsers = true; // All authenticated staff can access the Staff Directory for contact lookup
   const canAccessSettings = activeRole === 'System Admin';
 
   // Guard navigation against unauthorized direct access
@@ -169,10 +169,8 @@ export const LetterDashboardLayout: React.FC = () => {
       setCurrentNav('dashboard');
     } else if (currentNav === 'audit' && !canAccessAudit) {
       setCurrentNav('dashboard');
-    } else if (currentNav === 'users' && !canAccessUsers) {
-      setCurrentNav('dashboard');
     }
-  }, [currentNav, activeRole, canAccessSettings, canAccessAudit, canAccessUsers]);
+  }, [currentNav, activeRole, canAccessSettings, canAccessAudit]);
 
   const { data: statsData } = useGetStatsQuery();
   const { data: lettersData, isLoading: isLettersLoading } = useGetLettersQuery({
@@ -1222,20 +1220,31 @@ export const LetterDashboardLayout: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsComposeOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>
-                        {activeRole === 'Department Head'
-                          ? 'Issue Executive Directive'
-                          : activeRole === 'Directory Lead'
-                          ? 'Draft Directory Letter'
-                          : 'New Draft'}
-                      </span>
-                    </button>
+                    {activeRole !== 'System Admin' ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsComposeOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>
+                          {activeRole === 'Department Head'
+                            ? 'Issue Executive Directive'
+                            : activeRole === 'Directory Lead'
+                            ? 'Draft Directory Letter'
+                            : 'New Draft'}
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCurrentNav('users')}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-600 text-white font-bold text-xs hover:bg-purple-700 transition shadow-xs"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        <span>Provision Staff Account</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -2516,14 +2525,16 @@ export const LetterDashboardLayout: React.FC = () => {
                     <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-800 border border-slate-200">
                       {viewLetters.length} {viewLetters.length === 1 ? 'Record' : 'Records'}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setIsComposeOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Compose Letter</span>
-                    </button>
+                    {activeRole !== 'System Admin' && (
+                      <button
+                        type="button"
+                        onClick={() => setIsComposeOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-xs"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Compose Letter</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 

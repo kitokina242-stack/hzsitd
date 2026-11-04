@@ -9,6 +9,7 @@ import {
   useDeactivateDirectoryMutation,
   useGetDirectoryUsersQuery
 } from '../services/directoryApi';
+import { useAppSelector } from '@/store';
 
 interface DirectoriesManagerProps {
   onBackToDashboard: () => void;
@@ -62,6 +63,9 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
   onBackToDashboard,
   onSelectDirectoryLetters
 }) => {
+  const activeRole = useAppSelector((state) => state.auth.activeRole);
+  const isAdmin = activeRole === 'System Admin';
+
   const { data: remoteData, isLoading } = useGetDirectoriesListQuery();
   const [createDirectoryApi, { isLoading: isCreating }] = useCreateDirectoryMutation();
   const [deactivateApi] = useDeactivateDirectoryMutation();
@@ -174,14 +178,16 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
           <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200">
             {directories.length} Directorates Active
           </span>
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition shadow-sm cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Directorate</span>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Directorate</span>
+            </button>
+          )}
         </div>
       </div>
 
