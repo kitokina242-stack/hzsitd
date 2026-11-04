@@ -29,6 +29,8 @@ private_assets/
 
 # Environment & local configurations
 .env*
+!**/.env.example
+!**/.env.production
 .vercel/
 
 # Tooling & Assistant cache

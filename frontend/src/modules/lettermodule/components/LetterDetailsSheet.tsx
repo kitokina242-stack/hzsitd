@@ -59,7 +59,7 @@ export const LetterDetailsSheet: React.FC<LetterDetailsSheetProps> = ({
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
     ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '')
-    : 'http://localhost:8000';
+    : process.env.NEXT_PUBLIC_BACKEND_URL || 'https://letterportalbackend.onrender.com';
 
   const formatFileSize = (bytes: number) => {
     if (!bytes) return '0 B';

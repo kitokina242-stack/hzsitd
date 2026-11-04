@@ -7,7 +7,7 @@ import { apiSlice } from '@/store/apiSlice';
 import { setSocketConnected, addNotification } from '../features/messageSlice';
 
 const SOCKET_SERVER_URL =
-  process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000';
+  process.env.NEXT_PUBLIC_SOCKET_URL || 'https://letterportalbackend.onrender.com';
 
 export function useSocket() {
   const dispatch = useAppDispatch();

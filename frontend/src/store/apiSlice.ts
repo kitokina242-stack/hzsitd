@@ -4,7 +4,7 @@ import type { RootState } from './index';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1',
+    baseUrl: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
     prepareHeaders: (headers, { getState }) => {
       const state = getState() as RootState;
       const token = state.auth?.token || (typeof window !== 'undefined' ? localStorage.getItem('hzsitd_token') : null);

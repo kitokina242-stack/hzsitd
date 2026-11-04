@@ -76,16 +76,22 @@ export const LoginPage: React.FC = () => {
           }
         } catch {
           // Fallback user state with token
+          const isAdmin = email.toLowerCase().includes('admin');
           dispatch(setCredentials({
             token,
             refreshToken,
             user: {
               id: 1,
-              full_name: email.split('@')[0],
+              user_id: 1,
+              full_name: isAdmin ? 'System Administrator' : email.split('@')[0],
               username: email.split('@')[0],
               email,
-              role: 'Officer',
-              position_title: 'Government Officer'
+              role: isAdmin ? 'System Admin' : 'Officer',
+              position_title: isAdmin ? 'System Administrator' : 'Government Officer',
+              directory_id: 1,
+              directory_name: 'Executive Office',
+              account_status: 'active',
+              avatar_url: '/assets/images/profile/user-1.jpg'
             }
           }));
         }
@@ -246,11 +252,39 @@ export const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          {/* One-Click Quick Testing Personas */}
+          {/* Live Backend Seed Credentials Quick Autofill */}
           <div className="mt-6 pt-5 border-t border-slate-700/60">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live Backend Seed Account
+              </span>
+              <span className="text-[10px] text-slate-400 font-mono">Render API</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail('admin@example.gov.et');
+                setPassword('ChangeMe#12345');
+              }}
+              className="w-full text-left p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/40 hover:border-emerald-400 transition-all cursor-pointer group flex items-center justify-between"
+            >
+              <div>
+                <div className="text-xs font-semibold text-emerald-200 group-hover:text-white flex items-center gap-2">
+                  <span>admin@example.gov.et</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-medium">Ready</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-mono mt-0.5">Password: ChangeMe#12345 (Click to Autofill)</div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
+            </button>
+          </div>
+
+          {/* One-Click Quick Testing Personas */}
+          <div className="mt-4 pt-4 border-t border-slate-700/60">
             <div className="flex items-center gap-1.5 mb-2.5 text-slate-400 text-xs font-semibold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Instant Test Access (Offline / Demo)</span>
+              <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+              <span>Offline / Demo Personas</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button

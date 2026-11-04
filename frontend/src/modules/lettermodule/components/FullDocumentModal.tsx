@@ -80,7 +80,7 @@ export const FullDocumentModal: React.FC<FullDocumentModalProps> = ({
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL
     ? process.env.NEXT_PUBLIC_API_URL.replace(/\/api$/, '')
-    : 'http://localhost:8000';
+    : process.env.NEXT_PUBLIC_BACKEND_URL || 'https://letterportalbackend.onrender.com';
 
   const isStep1Done = true;
   const isStep2Done =
