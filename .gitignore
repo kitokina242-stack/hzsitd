@@ -24,6 +24,8 @@ frontend/.next/
 
 # Raw uncompressed 3D backups (kept safely on local disk)
 *_raw_backup.glb
+private_assets/
+*.glb.bak
 
 # Environment & local configurations
 .env*
