@@ -2772,7 +2772,7 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* =============================================================
                 VIEW: AUDIT TRAIL LOGS (Module 9 - AUD)
                 ============================================================= */}
-            {currentNav === 'audit' && (
+            {currentNav === 'audit' && canAccessAudit && (
               <AuditLogViewer
                 onBackToDashboard={() => setCurrentNav('dashboard')}
               />
@@ -2781,7 +2781,7 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* =============================================================
                 VIEW: WEBSITE CONTENT CMS & FAQS (Module 8 - WEB)
                 ============================================================= */}
-            {currentNav === 'settings' && (
+            {currentNav === 'settings' && canAccessSettings && (
               <WebsiteCmsManager
                 onBackToDashboard={() => setCurrentNav('dashboard')}
               />

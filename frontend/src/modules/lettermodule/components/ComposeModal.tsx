@@ -30,7 +30,10 @@ import {
   Stamp,
   PenTool,
   FileText,
+  Camera,
+  ScanText,
 } from 'lucide-react';
+import { ImageToTextModal } from './ImageToTextModal';
 
 interface UploadedAttachment {
   filename: string;
@@ -91,6 +94,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
   const [priority, setPriority] = useState<LetterPriority>('Routine');
+  const [isOcrOpen, setIsOcrOpen] = useState(false);
 
   // Lead-specific destination: Send to another Directorate vs Submit to Head
   const [leadTargetType, setLeadTargetType] = useState<'INTER_DIRECTORATE' | 'UPWARD_TO_HEAD'>('INTER_DIRECTORATE');
@@ -715,6 +719,23 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   ))}
                 </select>
               </div>
+
+              <div className="pt-1.5 flex items-center justify-between border-t border-blue-200/60">
+                <span className="text-[11px] font-medium text-blue-800">
+                  Have a physical paper letter or scanned dispatch?
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsOcrOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-white text-blue-700 hover:bg-blue-100/70 border border-blue-300 transition shadow-2xs"
+                >
+                  <Camera className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Scan Inbound Letter (OCR)</span>
+                  <span className="text-[10px] px-1 py-0.2 bg-blue-100 text-blue-800 font-mono rounded">
+                    አማ / ENG
+                  </span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -786,9 +807,23 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           {/* ======================================================== */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-bold text-slate-800">
-                {direction === 'INCOMING' ? 'Summary / Mandates' : 'Message Content'}
-              </label>
+              <div className="flex items-center gap-2.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  {direction === 'INCOMING' ? 'Summary / Mandates' : 'Message Content'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsOcrOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 transition shadow-2xs"
+                  title="Scan physical paper document with camera or upload image (Amharic & English OCR)"
+                >
+                  <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Scan to Text (OCR)</span>
+                  <span className="text-[10px] px-1 py-0.2 bg-emerald-200 text-emerald-800 font-mono rounded">
+                    አማ / ENG
+                  </span>
+                </button>
+              </div>
               <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md border border-slate-200">
                 <button
                   type="button"
@@ -952,6 +987,22 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Client-Side Multilingual Image-to-Text OCR Modal */}
+      <ImageToTextModal
+        isOpen={isOcrOpen}
+        onClose={() => setIsOcrOpen(false)}
+        onInsertBody={(extractedText, mode) => {
+          if (mode === 'replace') {
+            setBody(extractedText);
+          } else {
+            setBody((prev) => (prev ? `${prev}\n\n${extractedText}` : extractedText));
+          }
+        }}
+        onInsertSubject={(extractedSubject) => {
+          setSubject(extractedSubject);
+        }}
+      />
     </div>
   );
 };
