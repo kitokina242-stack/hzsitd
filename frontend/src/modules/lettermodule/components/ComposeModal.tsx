@@ -23,17 +23,19 @@ import {
   List,
   ListOrdered,
   FileCheck,
-  AlertCircle,
   Loader2,
   Building2,
   Key,
   ShieldCheck,
   Send,
   Inbox,
-  Lock,
   Stamp,
   PenTool,
-  Info,
+  ArrowRight,
+  ShieldAlert,
+  UserCheck,
+  Award,
+  Compass,
 } from 'lucide-react';
 
 interface UploadedAttachment {
@@ -51,7 +53,7 @@ interface ComposeModalProps {
   initialBody?: string;
 }
 
-// Fallback directories if backend /directories endpoint fails (e.g. 500 on Render)
+// Fallback directories if backend /directories endpoint returns 500
 const FALLBACK_DIRECTORIES = [
   { id: 1, name: 'Executive Office & Cabinet Desk', code: 'EXEC' },
   { id: 2, name: 'Software & Digital Innovations Directorate', code: 'SW' },
@@ -60,7 +62,7 @@ const FALLBACK_DIRECTORIES = [
   { id: 5, name: 'Finance & Human Resources Directorate', code: 'FHR' },
 ];
 
-// Fallback staff list if backend /users endpoint fails
+// Fallback staff list if backend /users endpoint returns 500
 const FALLBACK_USERS = [
   { id: 1, full_name: 'Dr. Bezabih Alemu', role: 'Department Head', position_title: 'Head of Department', directory_id: 1 },
   { id: 2, full_name: 'Eng. Yohannes Haile', role: 'Directory Lead', position_title: 'Software Directorate Lead', directory_id: 2 },
@@ -78,29 +80,41 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   const currentUser = useAppSelector((state) => state.auth.user);
   const activeRole = useAppSelector((state) => state.auth.activeRole) || currentUser?.role || 'Officer';
 
+  // Role determinations
+  const isExecutive = activeRole === 'Department Head' || activeRole === 'System Admin';
+  const isLead = activeRole === 'Directory Lead';
+  const isOfficer = activeRole === 'Officer';
+
   const { data: dirsData } = useGetDirectoriesQuery();
   const { data: usersData } = useGetUsersQuery();
   const [createLetter, { isLoading }] = useCreateLetterMutation();
   const [uploadFile, { isLoading: isUploading }] = useUploadFileMutation();
 
-  // Direction: Outgoing vs Inbound
+  // Workflow Direction: Outgoing vs Inbound
   const [direction, setDirection] = useState<LetterDirection>('OUTGOING');
+
+  // Shared form fields
   const [subject, setSubject] = useState(initialSubject);
   const [body, setBody] = useState(initialBody);
   const [priority, setPriority] = useState<LetterPriority>('Routine');
   const [letterType, setLetterType] = useState('Official Letter');
 
-  // Destination for Outgoing: Internal Directorate vs Outside Ministry/Authority
-  const [outboundTargetType, setOutboundTargetType] = useState<'INTERNAL' | 'EXTERNAL'>('INTERNAL');
+  // Lead-specific routing: Inter-Directorate vs Upward to Head
+  const [leadTargetType, setLeadTargetType] = useState<'INTER_DIRECTORATE' | 'UPWARD_TO_HEAD'>('INTER_DIRECTORATE');
+
+  // Executive-specific routing: External Ministry vs Internal Directive
+  const [execTargetType, setExecTargetType] = useState<'EXTERNAL_MINISTRY' | 'INTERNAL_DIRECTIVE'>('EXTERNAL_MINISTRY');
+
+  // Target directory and recipient user
   const [recipientDirectoryId, setRecipientDirectoryId] = useState<number | ''>('');
   const [assignedOfficerId, setAssignedOfficerId] = useState<number | ''>('');
 
-  // External Destination fields (for Outgoing letters to MoIT, Hossana City, etc.)
+  // External Destination fields (for Department Head sending to MoIT, etc.)
   const [externalRecipientOrg, setExternalRecipientOrg] = useState('');
   const [externalRecipientName, setExternalRecipientName] = useState('');
   const [externalRecipientAddress, setExternalRecipientAddress] = useState('');
 
-  // Inbound Letter fields (for incoming physical scanned letters)
+  // Inbound Letter fields (for receiving physical letters from outside)
   const [externalSenderOrg, setExternalSenderOrg] = useState('');
   const [externalSenderName, setExternalSenderName] = useState('');
   const [externalSenderRef, setExternalSenderRef] = useState('');
@@ -114,7 +128,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   const [selectedStampId, setSelectedStampId] = useState<number>(1);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number>(1);
 
-  // Guaranteed non-empty lists with fallback constants
+  // Guaranteed lists with fallback constants
   const directories = useMemo(() => {
     return dirsData?.directories && dirsData.directories.length > 0
       ? dirsData.directories
@@ -205,29 +219,51 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         ];
   }, [templatesData]);
 
-  // Role permissions
-  const isExecutive = activeRole === 'Department Head' || activeRole === 'System Admin';
-  const isLead = activeRole === 'Directory Lead';
-  const isOfficer = activeRole === 'Officer';
-
-  // Attachments
+  // Attachments state
   const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
   const [rawFiles, setRawFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Set appropriate defaults whenever modal opens or role changes
   React.useEffect(() => {
     if (isOpen) {
       setSubject(initialSubject);
       setBody(initialBody);
-      // Sensible default target directory
-      if (!recipientDirectoryId && directories.length > 0) {
-        const defaultDir = directories.find((d) => d.id !== currentUser?.directory_id) || directories[0];
-        setRecipientDirectoryId(defaultDir?.id || 1);
+
+      if (isOfficer) {
+        setDirection('OUTGOING');
+        setLetterType('Internal Memo');
+        // Pre-target officer's Directorate Lead (e.g. Eng. Yohannes Haile)
+        const myLead = users.find((u) => u.role === 'Directory Lead' && u.directory_id === (currentUser?.directory_id || 2));
+        if (myLead) {
+          setAssignedOfficerId(myLead.id);
+          setRecipientDirectoryId(myLead.directory_id || 2);
+        } else {
+          setAssignedOfficerId(2);
+          setRecipientDirectoryId(2);
+        }
+        setSelectedSignatureId(3);
+        setSelectedStampId(2);
+        setSelectedTemplateId(3);
+      } else if (isLead) {
+        setLetterType('Technical Memorandum');
+        // Default target another directorate
+        const otherDir = directories.find((d) => d.id !== (currentUser?.directory_id || 2)) || directories[0];
+        setRecipientDirectoryId(otherDir.id);
+        setSelectedSignatureId(2); // Eng. Yohannes
+        setSelectedStampId(2); // Software round stamp
+        setSelectedTemplateId(3);
+      } else if (isExecutive) {
+        setLetterType('Official Letter');
+        setSelectedSignatureId(1); // Dr. Bezabih digital certificate
+        setSelectedStampId(1); // Executive Gold Seal
+        setSelectedTemplateId(1); // Ministerial circular template
+        setRecipientDirectoryId(2);
       }
     }
-  }, [isOpen, initialSubject, initialBody, directories, currentUser?.directory_id, recipientDirectoryId]);
+  }, [isOpen, initialSubject, initialBody, isOfficer, isLead, isExecutive, directories, users, currentUser?.directory_id]);
 
   if (!isOpen) return null;
 
@@ -284,7 +320,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
     if (direction === 'INCOMING') {
       if (!externalSenderOrg.trim()) {
-        alert('Please specify the sending ministry, authority or organization.');
+        alert('Please specify the sending ministry or organization.');
         return;
       }
       if (!body.trim() && rawFiles.length === 0) {
@@ -294,30 +330,36 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     } else {
       // Outgoing validation
       if (!body.trim() && rawFiles.length === 0) {
-        alert('Please enter letter body text or attach a signed document.');
+        alert('Please enter message text or attach a document file.');
         return;
       }
-      if (outboundTargetType === 'EXTERNAL' && !externalRecipientOrg.trim()) {
-        alert('Please specify the recipient external organization or government authority.');
-        return;
-      }
-      if (outboundTargetType === 'INTERNAL' && !recipientDirectoryId) {
-        alert('Please select a target directorate inside HZSITD.');
+      if (isExecutive && execTargetType === 'EXTERNAL_MINISTRY' && !externalRecipientOrg.trim()) {
+        alert('Please specify the recipient external ministry or public authority.');
         return;
       }
     }
 
-    // Determine letter_type according to api-design.json contract
+    // Determine letter_type according to api-design.json OpenAPI contract
     let computedLetterType = 'internal_outbox';
     if (direction === 'INCOMING') {
       computedLetterType = externalSenderOrg ? 'outside_inbox' : 'internal_inbox';
     } else {
-      computedLetterType = outboundTargetType === 'EXTERNAL' ? 'outside_outbox' : 'internal_outbox';
+      if (isExecutive && execTargetType === 'EXTERNAL_MINISTRY') {
+        computedLetterType = 'outside_outbox';
+      } else {
+        computedLetterType = 'internal_outbox';
+      }
     }
 
-    const owningDirId = currentUser?.directory_id || 1;
-    const targetDirId = Number(recipientDirectoryId) || (owningDirId === 1 ? 2 : 1);
-    const targetUserId = Number(assignedOfficerId) || 2;
+    const owningDirId = currentUser?.directory_id || (isOfficer ? 2 : isLead ? 2 : 1);
+    let targetDirId = Number(recipientDirectoryId) || (owningDirId === 1 ? 2 : 1);
+    let targetUserId = Number(assignedOfficerId) || 2;
+
+    if (isLead && leadTargetType === 'UPWARD_TO_HEAD') {
+      targetDirId = 1; // Executive Office
+      targetUserId = 1; // Dr. Bezabih Alemu
+    }
+
     const sourceType = rawFiles.length > 0 ? 'uploaded' : 'generated';
 
     const formData = new FormData();
@@ -327,6 +369,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       body.trim().slice(0, 160) ||
         (direction === 'INCOMING'
           ? `Inbound correspondence from ${externalSenderOrg}`
+          : isOfficer
+          ? `Internal memo draft by ${currentUser?.full_name || 'Officer'}`
           : 'Official administrative correspondence')
     );
 
@@ -342,11 +386,19 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     formData.append('received_directory_id', String(targetDirId));
     formData.append('received_by', String(targetUserId));
 
-    // For Inbound letters, pass default asset IDs silently to satisfy backend validation
-    formData.append('signature_id', String(direction === 'INCOMING' ? 1 : selectedSignatureId));
-    formData.append('stamp_id', String(direction === 'INCOMING' ? 1 : selectedStampId));
-    formData.append('letter_date', new Date().toISOString().split('T')[0]);
+    // Signatures and stamps according to role
+    if (direction === 'INCOMING') {
+      formData.append('signature_id', '1');
+      formData.append('stamp_id', '1');
+    } else if (isOfficer) {
+      formData.append('signature_id', String(selectedSignatureId || 3));
+      formData.append('stamp_id', String(selectedStampId || 2));
+    } else {
+      formData.append('signature_id', String(selectedSignatureId));
+      formData.append('stamp_id', String(selectedStampId));
+    }
 
+    formData.append('letter_date', new Date().toISOString().split('T')[0]);
     const due = new Date();
     due.setDate(due.getDate() + 7);
     formData.append('response_due_at', due.toISOString());
@@ -390,22 +442,49 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  // Determine submit button label based on role & direction
-  const getSubmitButtonLabel = () => {
+  // Determine Form Header Content based on Role
+  const getHeaderMeta = () => {
     if (direction === 'INCOMING') {
-      return 'Register & Route Inbound Letter';
+      return {
+        title: 'Register Inbound Ministerial Letter',
+        subtitle: 'Log physical scanned PDF received from external federal ministry or partner agency',
+        badge: 'REGISTRY INTAKE',
+        badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+        icon: <Inbox className="w-5 h-5 text-blue-600" />,
+      };
     }
-    if (isExecutive) {
-      return 'Sign & Dispatch Letter';
+
+    if (isOfficer) {
+      return {
+        title: 'Draft Internal Memo / Briefing Note',
+        subtitle: 'Draft a technical briefing, project update, or memo for your Directorate Lead to review',
+        badge: 'OFFICER DRAFT',
+        badgeColor: 'bg-slate-100 text-slate-800 border-slate-300',
+        icon: <FileText className="w-5 h-5 text-slate-700" />,
+      };
     }
+
     if (isLead) {
-      return outboundTargetType === 'INTERNAL'
-        ? 'Dispatch Internal Directive'
-        : 'Submit to Head for Seal';
+      return {
+        title: 'Directorate Memorandum & Directive',
+        subtitle: 'Issue inter-directorate technical directives or submit proposals upward to the Department Head',
+        badge: 'DIRECTORATE LEAD',
+        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        icon: <Compass className="w-5 h-5 text-emerald-700" />,
+      };
     }
-    // Officer role
-    return 'Submit Draft for Approval';
+
+    // Executive (Department Head / System Admin)
+    return {
+      title: 'Executive Official Letter & Ministerial Dispatch',
+      subtitle: 'Draft high-authority ministerial communications, executive decrees & external dispatches',
+      badge: 'EXECUTIVE CLEARANCE',
+      badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+      icon: <Award className="w-5 h-5 text-amber-700" />,
+    };
   };
+
+  const headerMeta = getHeaderMeta();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -417,36 +496,22 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-white flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700">
-              {direction === 'OUTGOING' ? (
-                <Send className="w-5 h-5" />
-              ) : (
-                <Inbox className="w-5 h-5 text-blue-600" />
-              )}
+            <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-center">
+              {headerMeta.icon}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-bold text-slate-900 leading-tight">
-                  {direction === 'OUTGOING'
-                    ? 'Compose Official Correspondence'
-                    : 'Register Inbound Ministerial Letter'}
+                  {headerMeta.title}
                 </h3>
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                    isExecutive
-                      ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                      : isLead
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-slate-100 text-slate-700 border border-slate-300'
-                  }`}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${headerMeta.badgeColor}`}
                 >
-                  {activeRole}
+                  {headerMeta.badge}
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 font-medium">
-                {direction === 'OUTGOING'
-                  ? 'Draft official letterhead memo, select transparent seal & dispatch'
-                  : 'Log scanned PDF received from federal ministry, regional bureau, or partner agency'}
+                {headerMeta.subtitle}
               </p>
             </div>
           </div>
@@ -459,117 +524,347 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           </button>
         </div>
 
-        {/* Workflow Switcher: Outgoing vs Inbound */}
-        <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0 text-xs">
-          <span className="font-semibold text-slate-600">Letter Workflow Action:</span>
-          <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-xs">
-            <button
-              type="button"
-              onClick={() => setDirection('OUTGOING')}
-              className={`px-3.5 py-1.5 rounded-lg font-bold transition text-xs flex items-center gap-1.5 ${
-                direction === 'OUTGOING'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Send className="w-3.5 h-3.5" />
-              <span>Send Outgoing Letter</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setDirection('INCOMING')}
-              className={`px-3.5 py-1.5 rounded-lg font-bold transition text-xs flex items-center gap-1.5 ${
-                direction === 'INCOMING'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'text-slate-600 hover:bg-slate-100'
-              }`}
-            >
-              <Inbox className="w-3.5 h-3.5" />
-              <span>Register Inbound Scanned Letter</span>
-            </button>
+        {/* Workflow Switcher: Only shown for Department Head / Admin who manage Inbound Registry */}
+        {(isExecutive || currentUser?.role === 'System Admin') && (
+          <div className="px-6 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0 text-xs">
+            <span className="font-semibold text-slate-600">Executive Operation Mode:</span>
+            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200 shadow-xs">
+              <button
+                type="button"
+                onClick={() => setDirection('OUTGOING')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-xs flex items-center gap-1.5 ${
+                  direction === 'OUTGOING'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Executive Outgoing Letter</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDirection('INCOMING')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition text-xs flex items-center gap-1.5 ${
+                  direction === 'INCOMING'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Inbox className="w-3.5 h-3.5" />
+                <span>Register Inbound Ministerial Letter</span>
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Form Body */}
         <div className="p-6 overflow-y-auto space-y-4 text-sm text-slate-800">
           {/* ======================================================== */}
-          {/* MODE 1: OUTGOING LETTER WORKFLOW                         */}
+          {/* FORM TYPE 1: DESK OFFICER INTERNAL MEMO VIEW             */}
           {/* ======================================================== */}
-          {direction === 'OUTGOING' && (
-            <>
-              {/* Author Info */}
-              <div className="grid grid-cols-2 gap-4">
+          {direction === 'OUTGOING' && isOfficer && (
+            <div className="space-y-4">
+              {/* Author & Assigned Directorate Lead */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">
-                    Authoring Officer
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1 uppercase">
+                    Author (Desk Officer)
                   </label>
                   <input
                     type="text"
                     readOnly
-                    value={`${currentUser?.full_name || 'Dr. Bezabih Alemu'} (${currentUser?.position_title || activeRole})`}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-mono"
+                    value={`${currentUser?.full_name || 'Kalkidan Bekele'} (${currentUser?.position_title || 'Senior Software Engineer'})`}
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
                   />
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    {currentUser?.directory_name || 'Software & Digital Innovations Directorate'}
+                  </span>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-500 mb-1">
-                    Authoring Directorate
+                  <label className="block text-[11px] font-bold text-emerald-800 mb-1 uppercase flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Submitted Upward To (Directorate Lead) *</span>
                   </label>
-                  <input
-                    type="text"
-                    readOnly
-                    value={currentUser?.directory_name || 'Executive Office & Cabinet'}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700"
-                  />
+                  <select
+                    value={assignedOfficerId}
+                    onChange={(e) => setAssignedOfficerId(Number(e.target.value) || '')}
+                    className="w-full px-3 py-2 bg-white border border-emerald-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    {users
+                      .filter((u) => u.role === 'Directory Lead' || u.role === 'Department Head')
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.full_name} — {u.position_title}
+                        </option>
+                      ))}
+                  </select>
+                  <span className="text-[10px] text-emerald-700 mt-0.5 block">
+                    Your Lead will review, sign, and determine if an official seal is warranted.
+                  </span>
                 </div>
               </div>
 
-              {/* Destination Selector: Inside HZSITD vs Outside Ministry */}
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+              {/* Memo Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Document Type *
+                  </label>
+                  <select
+                    value={letterType}
+                    onChange={(e) => setLetterType(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  >
+                    <option>Internal Memo</option>
+                    <option>Technical Briefing Note</option>
+                    <option>Task Progress Report</option>
+                    <option>Draft Official Letter (For Clearance)</option>
+                    <option>Resource / Hardware Requisition</option>
+                  </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Subject Line *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Briefing: API Gateway Migration and Database Scalability Report"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* FORM TYPE 2: DIRECTORATE LEAD VIEW                       */}
+          {/* ======================================================== */}
+          {direction === 'OUTGOING' && isLead && (
+            <div className="space-y-4">
+              {/* Routing Choice for Directorate Lead */}
+              <div className="p-3.5 bg-emerald-50/40 rounded-xl border border-emerald-200 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                    Recipient Destination:
+                  <span className="text-[11px] font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <Compass className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Directorate Routing Protocol:</span>
                   </span>
-                  <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-xs">
+                  <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-emerald-200 shadow-xs">
                     <button
                       type="button"
-                      onClick={() => setOutboundTargetType('INTERNAL')}
+                      onClick={() => setLeadTargetType('INTER_DIRECTORATE')}
                       className={`px-3 py-1 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
-                        outboundTargetType === 'INTERNAL'
+                        leadTargetType === 'INTER_DIRECTORATE'
                           ? 'bg-emerald-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <Building2 className="w-3.5 h-3.5" />
-                      <span>Inside HZSITD Directorate</span>
+                      <span>Inter-Directorate Directive</span>
                     </button>
                     <button
                       type="button"
-                      onClick={() => setOutboundTargetType('EXTERNAL')}
+                      onClick={() => setLeadTargetType('UPWARD_TO_HEAD')}
                       className={`px-3 py-1 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
-                        outboundTargetType === 'EXTERNAL'
+                        leadTargetType === 'UPWARD_TO_HEAD'
                           ? 'bg-emerald-600 text-white shadow-xs'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
-                      <span>🏛️ Outside Ministry / Authority (e.g. MoIT)</span>
+                      <Award className="w-3.5 h-3.5" />
+                      <span>Submit to Department Head</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Sub-form: Internal Directorate */}
-                {outboundTargetType === 'INTERNAL' ? (
+                {leadTargetType === 'INTER_DIRECTORATE' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Target Directorate *</span>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Target Directorate *
                       </label>
                       <select
                         value={recipientDirectoryId}
                         onChange={(e) => setRecipientDirectoryId(Number(e.target.value) || '')}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                       >
-                        <option value="">Select Target Directorate *</option>
+                        {directories
+                          .filter((d) => d.id !== (currentUser?.directory_id || 2))
+                          .map((d) => (
+                            <option key={d.id} value={d.id}>
+                              {d.name} ({d.code})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Directive Scope / Recipient Desk
+                      </label>
+                      <input
+                        type="text"
+                        readOnly
+                        value="Directorate Lead / Administrative Registry"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-white rounded-lg border border-emerald-200 text-xs text-emerald-900 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>
+                      Addressing <strong>Dr. Bezabih Alemu (Head of Department)</strong> for executive review, policy decree, or external ministerial dispatch authorization.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Lead Endorsement: Directorate Round Stamp */}
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <Stamp className="w-4 h-4 text-emerald-600" />
+                  <div>
+                    <span className="font-bold text-slate-800 block">
+                      Directorate Authentication Round Stamp (Transparent Red Ink)
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      Signatory: Eng. Yohannes Haile (Software Directorate Lead)
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  Directorate Verified
+                </span>
+              </div>
+
+              {/* Subject & Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Directive Type *
+                  </label>
+                  <select
+                    value={letterType}
+                    onChange={(e) => setLetterType(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  >
+                    <option>Inter-Directorate Technical Memorandum</option>
+                    <option>Operational Directive</option>
+                    <option>System Architecture Proposal</option>
+                    <option>Cross-Directorate Coordination Note</option>
+                    <option>Technical Response / Compliance</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Subject Line *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Directive: Integration Requirements for Regional e-Services Gateway"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* FORM TYPE 3: DEPARTMENT HEAD EXECUTIVE VIEW              */}
+          {/* ======================================================== */}
+          {direction === 'OUTGOING' && isExecutive && (
+            <div className="space-y-4">
+              {/* Executive Destination: External Ministry vs Internal Decree */}
+              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Executive Dispatch Authority:</span>
+                  </span>
+                  <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => setExecTargetType('EXTERNAL_MINISTRY')}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                        execTargetType === 'EXTERNAL_MINISTRY'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>🏛️ Outside Ministry / Authority (e.g. MoIT)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExecTargetType('INTERNAL_DIRECTIVE')}
+                      className={`px-3 py-1 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                        execTargetType === 'INTERNAL_DIRECTIVE'
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5" />
+                      <span>Internal Executive Decree (All Directorates)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {execTargetType === 'EXTERNAL_MINISTRY' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Recipient Ministry / Institution *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Ministry of Innovation & Technology (MoIT)"
+                        value={externalRecipientOrg}
+                        onChange={(e) => setExternalRecipientOrg(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Addressee / Official Title
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Dr. Fariya Amin (State Minister)"
+                        value={externalRecipientName}
+                        onChange={(e) => setExternalRecipientName(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Official Address / City
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Addis Ababa, Ethiopia"
+                        value={externalRecipientAddress}
+                        onChange={(e) => setExternalRecipientAddress(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Target Subordinate Directorate *
+                      </label>
+                      <select
+                        value={recipientDirectoryId}
+                        onChange={(e) => setRecipientDirectoryId(Number(e.target.value) || '')}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      >
+                        <option value="">All Directorates (General Executive Circular)</option>
                         {directories.map((d) => (
                           <option key={d.id} value={d.id}>
                             {d.name} ({d.code})
@@ -577,125 +872,43 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                         ))}
                       </select>
                     </div>
-
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center justify-between">
-                        <span>Attention Desk (Optional)</span>
-                        <span className="text-[10px] text-slate-400 font-normal lowercase">(delegation via minuting)</span>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
+                        Executive Mandate Level
                       </label>
-                      <select
-                        value={assignedOfficerId}
-                        onChange={(e) => setAssignedOfficerId(Number(e.target.value) || '')}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                      >
-                        <option value="">Entire Directorate (Lead / Registry Desk)</option>
-                        {users
-                          .filter((u) => !recipientDirectoryId || u.directory_id === recipientDirectoryId)
-                          .map((u) => (
-                            <option key={u.id} value={u.id}>
-                              {u.full_name} — {u.position_title}
-                            </option>
-                          ))}
-                      </select>
+                      <input
+                        type="text"
+                        readOnly
+                        value="Binding Departmental Decree"
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-semibold"
+                      />
                     </div>
-                  </div>
-                ) : (
-                  /* Sub-form: External Ministry / Authority */
-                  <div className="space-y-2 pt-1">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
-                          Recipient Authority / Ministry *
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Ministry of Innovation & Technology (MoIT)"
-                          value={externalRecipientOrg}
-                          onChange={(e) => setExternalRecipientOrg(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
-                          Addressee / Official Title
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Dr. Fariya Amin (State Minister)"
-                          value={externalRecipientName}
-                          onChange={(e) => setExternalRecipientName(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase">
-                          Official Address / City
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Addis Ababa, Ethiopia"
-                          value={externalRecipientAddress}
-                          onChange={(e) => setExternalRecipientAddress(e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Officer Warning if trying to dispatch externally */}
-                    {isOfficer && (
-                      <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg text-xs">
-                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
-                        <span>
-                          <strong>Officer Clearance Rule:</strong> Outgoing correspondence to outside ministries will be forwarded to your Directorate Lead and Department Head for clearance before physical or digital dispatch.
-                        </span>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
 
-              {/* Letter Type */}
-              <div>
-                <label className="block text-xs font-bold text-slate-900 mb-1">
-                  Letter Type *
-                </label>
-                <select
-                  value={letterType}
-                  onChange={(e) => setLetterType(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
-                >
-                  <option>Official Letter</option>
-                  <option>Executive Directive / Instruction</option>
-                  <option>Inter-Directorate Technical Memorandum</option>
-                  <option>General Circular</option>
-                  <option>Official Inquiry / Request</option>
-                  <option>Technical Compliance Response</option>
-                </select>
-              </div>
-
-              {/* Official Stamp & Signature Endorsement Box (ISSUE 1 KEPT & ENHANCED) */}
-              <div className="p-3.5 bg-emerald-50/50 border border-emerald-200 rounded-xl space-y-2.5">
+              {/* Executive Cryptographic Endorsement Box (ISSUE 1 KEPT & ENHANCED) */}
+              <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-xl space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                    <span>Official Stamp &amp; Cryptographic Endorsement</span>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                    <ShieldCheck className="w-4 h-4 text-amber-700" />
+                    <span>Executive State Seal &amp; PKI Signature Endorsement</span>
                   </div>
-                  <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    Transparent PNG Overlays &amp; PKI Support
+                  <span className="text-[10px] font-bold text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded-full border border-amber-300">
+                    Highest State Clearance
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {/* Digital Signature Selector */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1">
                       <PenTool className="w-3 h-3 text-purple-600" />
-                      <span>Digital Signature *</span>
+                      <span>Executive Signature *</span>
                     </label>
                     <select
                       value={selectedSignatureId}
                       onChange={(e) => setSelectedSignatureId(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-amber-600 focus:outline-none"
                     >
                       {signatures.map((s) => (
                         <option key={s.signature_id} value={s.signature_id}>
@@ -705,7 +918,6 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                     </select>
                   </div>
 
-                  {/* Stamp Selector */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1">
                       <Stamp className="w-3 h-3 text-emerald-600" />
@@ -714,7 +926,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                     <select
                       value={selectedStampId}
                       onChange={(e) => setSelectedStampId(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-amber-600 focus:outline-none"
                     >
                       {stamps.map((st) => (
                         <option key={st.stamp_id} value={st.stamp_id}>
@@ -724,16 +936,15 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                     </select>
                   </div>
 
-                  {/* Letterhead Template Selector */}
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 mb-1 uppercase flex items-center gap-1">
                       <FileText className="w-3 h-3 text-blue-600" />
-                      <span>Stationery Template</span>
+                      <span>Letterhead Stationery</span>
                     </label>
                     <select
                       value={selectedTemplateId}
                       onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-amber-600 focus:outline-none"
                     >
                       {templates.map((t) => (
                         <option key={t.template_id} value={t.template_id}>
@@ -744,11 +955,43 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   </div>
                 </div>
               </div>
-            </>
+
+              {/* Subject & Type */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Letter Type *
+                  </label>
+                  <select
+                    value={letterType}
+                    onChange={(e) => setLetterType(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  >
+                    <option>Official Ministerial Letter</option>
+                    <option>Executive Strategic Directive</option>
+                    <option>General Circular</option>
+                    <option>Official Inquiry / Request to Ministry</option>
+                    <option>Compliance &amp; Policy Response</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-slate-900 mb-1">
+                    Subject Line *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Official Response: Deployment of Federal Innovation Framework across Hossana Zone"
+                    value={subject}
+                    onChange={(e) => setSubject(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
           )}
 
           {/* ======================================================== */}
-          {/* MODE 2: INBOUND MINISTERIAL REGISTRATION (ISSUE 2 FIX)   */}
+          {/* FORM TYPE 4: INBOUND REGISTRATION VIEW (ISSUE 2 FIX)     */}
           {/* ======================================================== */}
           {direction === 'INCOMING' && (
             <div className="space-y-3 p-4 bg-blue-50/60 rounded-xl border border-blue-200">
@@ -839,30 +1082,25 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   </select>
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-900 mb-1">
+                  Subject Line *
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter official title from the incoming letterhead..."
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                />
+              </div>
             </div>
           )}
 
           {/* ======================================================== */}
-          {/* COMMON FIELDS: Subject, Priority, Body, Attachments      */}
+          {/* COMMON SECTION: Priority, Message Body, Attachments      */}
           {/* ======================================================== */}
-
-          {/* Subject Line */}
-          <div>
-            <label className="block text-xs font-bold text-slate-900 mb-1">
-              Subject Line *
-            </label>
-            <input
-              type="text"
-              placeholder={
-                direction === 'INCOMING'
-                  ? 'Enter official title from the incoming letterhead...'
-                  : 'Enter clear, official subject title...'
-              }
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-slate-900 focus:outline-none"
-            />
-          </div>
 
           {/* Priority Classification */}
           <div>
@@ -895,15 +1133,18 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             </div>
           </div>
 
-          {/* Letter Body & Formatting Toolbar */}
+          {/* Message Content / Body Text */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-900">
                 {direction === 'INCOMING'
-                  ? 'Executive Summary & Directive Directives'
-                  : 'Letter Content / Body Text'}
+                  ? 'Executive Summary & Directive Notes'
+                  : isOfficer
+                  ? 'Memo Details / Briefing Text'
+                  : isLead
+                  ? 'Directive / Memorandum Text'
+                  : 'Official Letter Content / Body'}
               </label>
-              {/* Quick Formatting Tools */}
               <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200">
                 <button
                   type="button"
@@ -951,11 +1192,15 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
             <textarea
               ref={textareaRef}
-              rows={direction === 'INCOMING' ? 4 : 5}
+              rows={direction === 'INCOMING' ? 4 : isOfficer ? 4 : 5}
               placeholder={
                 direction === 'INCOMING'
                   ? 'Summarize the mandate, instructions, or required action points from the attached scanned letter...'
-                  : 'Type the complete official memorandum or directive text here...'
+                  : isOfficer
+                  ? 'Type your briefing explanation, findings, or draft proposal here...'
+                  : isLead
+                  ? 'Type the technical directive or memorandum instructions here...'
+                  : 'Type the complete official memorandum or ministerial directive text here...'
               }
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -963,13 +1208,13 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             />
           </div>
 
-          {/* File Upload Dropzone (Scanned Originals / Attachments) */}
+          {/* File Upload Dropzone */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="block text-xs font-bold text-slate-900">
                 {direction === 'INCOMING'
                   ? 'Scanned Original Letter Document (PDF / High-Res Image) *'
-                  : 'Supporting Attachments & Official Documents (Optional)'}
+                  : 'Supporting Attachments (PDF, Documents, Technical Specs)'}
               </label>
               <span className="text-[11px] text-slate-400 font-medium">Max 25MB · PDF, Images, Word</span>
             </div>
@@ -1039,7 +1284,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             {attachments.length > 0 && (
               <div className="space-y-2 pt-1">
                 <span className="text-[11px] font-bold text-slate-600 block">
-                  Attached Document Files ({attachments.length}):
+                  Attached Files ({attachments.length}):
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {attachments.map((file, idx) => (
@@ -1080,7 +1325,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             {attachments.length > 0 && (
               <span className="inline-flex items-center gap-1.5 text-emerald-700 font-bold">
                 <FileCheck className="w-4 h-4" />
-                <span>{attachments.length} document file(s) attached</span>
+                <span>{attachments.length} file(s) attached</span>
               </span>
             )}
           </div>
@@ -1114,11 +1359,23 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
               className={`px-5 py-2 rounded-lg text-xs font-semibold text-white transition flex items-center gap-1.5 shadow-xs disabled:opacity-50 ${
                 direction === 'INCOMING'
                   ? 'bg-blue-600 hover:bg-blue-700'
+                  : isExecutive
+                  ? 'bg-amber-600 hover:bg-amber-700'
                   : 'bg-emerald-600 hover:bg-emerald-700'
               }`}
             >
               <Check className="w-4 h-4" />
-              <span>{getSubmitButtonLabel()}</span>
+              <span>
+                {direction === 'INCOMING'
+                  ? 'Register & Route Inbound Letter'
+                  : isOfficer
+                  ? 'Submit to Lead for Approval'
+                  : isLead
+                  ? leadTargetType === 'INTER_DIRECTORATE'
+                    ? 'Dispatch Directorate Directive'
+                    : 'Forward to Department Head'
+                  : 'Sign & Dispatch Official Letter'}
+              </span>
             </button>
           </div>
         </div>
