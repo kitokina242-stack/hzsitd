@@ -256,34 +256,34 @@ export const LetterDashboardLayout: React.FC = () => {
 
   if (currentNav === 'inbox') {
     viewLetters = allLetters.filter((l) => l.direction === 'INCOMING');
-    pageTitle = 'Inbox — Incoming Directives & Correspondence';
-    pageSubtitle = 'All inbound letters received from external ministries, federal organs, and regional government.';
+    pageTitle = 'Inbox';
+    pageSubtitle = 'Incoming correspondence and received letters.';
   } else if (currentNav === 'sent') {
     viewLetters = allLetters.filter((l) => l.direction === 'OUTGOING' && l.status !== 'Draft');
-    pageTitle = 'Sent & Dispatched Letters';
-    pageSubtitle = 'All outgoing correspondence officially submitted, endorsed, digitally sealed, and dispatched.';
+    pageTitle = 'Sent Letters';
+    pageSubtitle = 'All dispatched correspondence and sent letters.';
   } else if (currentNav === 'drafts') {
     viewLetters = allLetters.filter((l) => l.status === 'Draft');
-    pageTitle = 'Draft Letters Workbench';
-    pageSubtitle = 'Unpublished drafts in progress awaiting finalization, review, or submission.';
+    pageTitle = 'Drafts';
+    pageSubtitle = 'Unpublished drafts in progress awaiting review or dispatch.';
   } else if (currentNav === 'archived') {
     viewLetters = allLetters.filter(
       (l) => l.status === 'Dispatched' || l.status === 'Completed' || l.status === 'Archived'
     );
-    pageTitle = 'Archived & Completed Records';
-    pageSubtitle = 'Fully endorsed, sealed, and dispatched official records permanently preserved in departmental archives.';
+    pageTitle = 'Archive';
+    pageSubtitle = 'Historical and completed records.';
   } else if (currentNav === 'endorsements') {
     viewLetters = awaitingEndorsement;
-    pageTitle = 'Executive Endorsement Clearance Queue';
-    pageSubtitle = 'Outgoing letters approved by Directory Leads awaiting final executive signature and cryptographic legal seal.';
+    pageTitle = 'Pending Approvals';
+    pageSubtitle = 'Letters awaiting executive seal and signature.';
   } else if (currentNav === 'clearance') {
     viewLetters = subordinateQueue;
-    pageTitle = 'Supervisor Review Queue';
-    pageSubtitle = 'Draft correspondence prepared by operational officers awaiting supervisory review and clearance.';
+    pageTitle = 'Pending Approvals';
+    pageSubtitle = 'Draft memos and letters from officers awaiting your review.';
   } else if (currentNav === 'directives') {
     viewLetters = assignedDirectives;
-    pageTitle = 'Assigned Directives & Tasks';
-    pageSubtitle = 'Tasks and ministerial mandates assigned directly to your operational workbench.';
+    pageTitle = 'Inbox';
+    pageSubtitle = 'Directives and letters assigned to you.';
   } else if (currentNav === 'directory' && selectedDirId) {
     viewLetters = allLetters.filter(
       (l) => l.sender_directory_id === selectedDirId || l.recipient_directory_id === selectedDirId
@@ -368,12 +368,14 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* ============================================================= */}
             {/* DEPARTMENT HEAD SIDEBAR                                       */}
             {/* ============================================================= */}
+            {/* DEPARTMENT HEAD SIDEBAR                                       */}
+            {/* ============================================================= */}
             {activeRole === 'Department Head' && (
               <>
-                {/* Group: Executive Correspondence */}
+                {/* Group: Letters */}
                 <div>
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Executive Correspondence
+                    Letters
                   </div>
                   <nav className="space-y-1">
                     <button
@@ -422,7 +424,7 @@ export const LetterDashboardLayout: React.FC = () => {
                             unoptimized
                           />
                         </div>
-                        <span>Ministerial Inbound</span>
+                        <span>Inbox</span>
                       </div>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
@@ -457,7 +459,7 @@ export const LetterDashboardLayout: React.FC = () => {
                             unoptimized
                           />
                         </div>
-                        <span>Official Outbound</span>
+                        <span>Sent</span>
                       </div>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
@@ -468,6 +470,30 @@ export const LetterDashboardLayout: React.FC = () => {
                       >
                         {stats?.sentCount || 0}
                       </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentNav('drafts');
+                        setSelectedDirId(null);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition ${
+                        currentNav === 'drafts'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                      }`}
+                    >
+                      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                        <Image
+                          src="/animated-icons/wired-outline-245-file-pencil-in-reveal.webp"
+                          alt="Drafts"
+                          width={24}
+                          height={24}
+                          unoptimized
+                        />
+                      </div>
+                      <span>Drafts</span>
                     </button>
 
                     <button
@@ -491,15 +517,15 @@ export const LetterDashboardLayout: React.FC = () => {
                           unoptimized
                         />
                       </div>
-                      <span>Archived Records</span>
+                      <span>Archive</span>
                     </button>
                   </nav>
                 </div>
 
-                {/* Group: Executive Clearance */}
+                {/* Group: Approvals */}
                 <div>
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Executive Clearance
+                    Approvals
                   </div>
                   <div className="space-y-1">
                     <button
@@ -524,7 +550,7 @@ export const LetterDashboardLayout: React.FC = () => {
                             unoptimized
                           />
                         </div>
-                        <span className="whitespace-nowrap">Executive Endorsements</span>
+                        <span className="whitespace-nowrap">Pending Approvals</span>
                       </div>
                       <span
                         className={`font-bold text-[10px] px-1.5 py-0.5 rounded-full ${
@@ -651,10 +677,10 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* ============================================================= */}
             {activeRole === 'Directory Lead' && (
               <>
-                {/* Group: Directory Operations */}
+                {/* Group: Letters */}
                 <div>
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Directory Operations
+                    Letters
                   </div>
                   <nav className="space-y-1">
                     <button
@@ -678,7 +704,7 @@ export const LetterDashboardLayout: React.FC = () => {
                           unoptimized
                         />
                       </div>
-                      <span>Operations Hub</span>
+                      <span>Dashboard</span>
                     </button>
 
                     <button
@@ -697,13 +723,13 @@ export const LetterDashboardLayout: React.FC = () => {
                         <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
                           <Image
                             src="/animated-icons/wired-outline-3090-mail-open-document-in-reveal.webp"
-                            alt="Directives"
+                            alt="Inbox"
                             width={24}
                             height={24}
                             unoptimized
                           />
                         </div>
-                        <span>Assigned Directives</span>
+                        <span>Inbox</span>
                       </div>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
@@ -732,13 +758,13 @@ export const LetterDashboardLayout: React.FC = () => {
                         <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
                           <Image
                             src="/animated-icons/wired-outline-177-mail-fast-in-assembly.webp"
-                            alt="Dispatched"
+                            alt="Sent"
                             width={24}
                             height={24}
                             unoptimized
                           />
                         </div>
-                        <span>Directorate Dispatch</span>
+                        <span>Sent</span>
                       </div>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
@@ -772,15 +798,39 @@ export const LetterDashboardLayout: React.FC = () => {
                           unoptimized
                         />
                       </div>
-                      <span>Active Drafts</span>
+                      <span>Drafts</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentNav('archived');
+                        setSelectedDirId(null);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition ${
+                        currentNav === 'archived'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                      }`}
+                    >
+                      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                        <Image
+                          src="/animated-icons/wired-outline-12-layers-in-reveal.webp"
+                          alt="Archive"
+                          width={24}
+                          height={24}
+                          unoptimized
+                        />
+                      </div>
+                      <span>Archive</span>
                     </button>
                   </nav>
                 </div>
 
-                {/* Group: Supervisory Review */}
+                {/* Group: Approvals */}
                 <div>
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Supervisory Review
+                    Approvals
                   </div>
                   <div className="space-y-1">
                     <button
@@ -805,7 +855,7 @@ export const LetterDashboardLayout: React.FC = () => {
                             unoptimized
                           />
                         </div>
-                        <span>Clearance Queue</span>
+                        <span>Pending Approvals</span>
                       </div>
                       <span
                         className={`font-bold text-[10px] px-1.5 py-0.5 rounded-full ${
@@ -872,10 +922,10 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* ============================================================= */}
             {activeRole === 'Officer' && (
               <>
-                {/* Group: Officer Workbench */}
+                {/* Group: Letters */}
                 <div>
                   <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Officer Workbench
+                    Letters
                   </div>
                   <nav className="space-y-1">
                     <button
@@ -899,7 +949,7 @@ export const LetterDashboardLayout: React.FC = () => {
                           unoptimized
                         />
                       </div>
-                      <span>My Workbench</span>
+                      <span>Dashboard</span>
                     </button>
 
                     <button
@@ -917,14 +967,14 @@ export const LetterDashboardLayout: React.FC = () => {
                       <div className="flex items-center gap-3">
                         <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
                           <Image
-                            src="/animated-icons/wired-outline-120-folder-in-reveal.webp"
-                            alt="Directives"
+                            src="/animated-icons/wired-outline-3090-mail-open-document-in-reveal.webp"
+                            alt="Inbox"
                             width={24}
                             height={24}
                             unoptimized
                           />
                         </div>
-                        <span>My Assigned Tasks</span>
+                        <span>Inbox</span>
                       </div>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
@@ -934,6 +984,41 @@ export const LetterDashboardLayout: React.FC = () => {
                         }`}
                       >
                         {assignedDirectives.length}
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentNav('sent');
+                        setSelectedDirId(null);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
+                        currentNav === 'sent'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                          <Image
+                            src="/animated-icons/wired-outline-177-mail-fast-in-assembly.webp"
+                            alt="Sent"
+                            width={24}
+                            height={24}
+                            unoptimized
+                          />
+                        </div>
+                        <span>Sent</span>
+                      </div>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                          currentNav === 'sent'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {stats?.sentCount || 0}
                       </span>
                     </button>
 
@@ -958,44 +1043,54 @@ export const LetterDashboardLayout: React.FC = () => {
                           unoptimized
                         />
                       </div>
-                      <span>My Drafts & Revisions</span>
+                      <span>Drafts</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => {
-                        setCurrentNav('sent');
+                        setCurrentNav('archived');
                         setSelectedDirId(null);
                       }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs transition ${
-                        currentNav === 'sent'
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition ${
+                        currentNav === 'archived'
                           ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 font-medium'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
-                          <Image
-                            src="/animated-icons/wired-outline-177-mail-fast-in-assembly.webp"
-                            alt="Dispatched"
-                            width={24}
-                            height={24}
-                            unoptimized
-                          />
-                        </div>
-                        <span>Dispatched & Closed</span>
+                      <div className="w-6 h-6 flex items-center justify-center flex-shrink-0">
+                        <Image
+                          src="/animated-icons/wired-outline-12-layers-in-reveal.webp"
+                          alt="Archive"
+                          width={24}
+                          height={24}
+                          unoptimized
+                        />
                       </div>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                          currentNav === 'sent'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/70'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {stats?.sentCount || 0}
-                      </span>
+                      <span>Archive</span>
                     </button>
                   </nav>
+                </div>
+
+                {/* Group: Directory */}
+                <div>
+                  <div className="px-3 mb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Directory
+                  </div>
+                  <div className="space-y-0.5 text-xs text-slate-600">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentNav('users')}
+                      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition ${
+                        currentNav === 'users'
+                          ? 'bg-white text-slate-900 font-bold border border-slate-200/90 shadow-xs ring-1 ring-slate-900/5'
+                          : 'hover:text-slate-900 hover:bg-slate-100/70'
+                      }`}
+                    >
+                      <Users className="w-5 h-5 text-slate-500 flex-shrink-0" />
+                      <span>Staff Directory</span>
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -1174,15 +1269,7 @@ export const LetterDashboardLayout: React.FC = () => {
             </button>
             <span>/</span>
             <span className="text-slate-900 font-bold">
-              {currentNav === 'dashboard'
-                ? activeRole === 'Department Head'
-                  ? 'Executive Command Center'
-                  : activeRole === 'Directory Lead'
-                  ? 'Directory Operations Hub'
-                  : activeRole === 'Officer'
-                  ? 'Officer Operational Workbench'
-                  : 'System Governance Cockpit'
-                : pageTitle}
+              {currentNav === 'dashboard' ? 'Dashboard' : pageTitle}
             </span>
           </div>
 
@@ -1267,13 +1354,7 @@ export const LetterDashboardLayout: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-2 border-b border-slate-200">
                   <div>
                     <h1 className="font-serif-executive text-3xl sm:text-4xl text-slate-900 tracking-tight leading-tight">
-                      {activeRole === 'Department Head'
-                        ? 'Executive Command Center'
-                        : activeRole === 'Directory Lead'
-                        ? 'Directory Operations Hub'
-                        : activeRole === 'Officer'
-                        ? 'Officer Operational Workbench'
-                        : 'System Governance Cockpit'}
+                      Dashboard
                     </h1>
                     <p className="text-xs text-slate-500 mt-1">
                       {activeRole === 'Department Head'
@@ -1297,11 +1378,7 @@ export const LetterDashboardLayout: React.FC = () => {
                       >
                         <Plus className="w-3.5 h-3.5" />
                         <span>
-                          {activeRole === 'Department Head'
-                            ? 'Issue Executive Directive'
-                            : activeRole === 'Directory Lead'
-                            ? 'Draft Directory Letter'
-                            : 'New Draft'}
+                          {activeRole === 'Officer' ? 'New Memo' : 'New Letter'}
                         </span>
                       </button>
                     ) : (
