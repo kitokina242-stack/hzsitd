@@ -172,14 +172,28 @@ export const LetterDashboardLayout: React.FC = () => {
   const canAccessUsers = true; // All authenticated staff can access the Staff Directory for contact lookup
   const canAccessSettings = activeRole === 'System Admin';
 
-  // Guard navigation against unauthorized direct access
+  // Guard navigation against unauthorized direct access across all role-specific views
   useEffect(() => {
-    if (currentNav === 'settings' && !canAccessSettings) {
+    const adminOnlyTabs: NavKey[] = ['roles', 'stamps', 'signatures', 'templates', 'settings'];
+    const executiveOnlyTabs: NavKey[] = ['endorsements'];
+    const leadOnlyTabs: NavKey[] = ['clearance'];
+
+    if (activeRole !== 'System Admin' && adminOnlyTabs.includes(currentNav)) {
+      setCurrentNav('dashboard');
+    } else if (activeRole !== 'Department Head' && executiveOnlyTabs.includes(currentNav)) {
+      setCurrentNav('dashboard');
+    } else if (activeRole !== 'Directory Lead' && leadOnlyTabs.includes(currentNav)) {
       setCurrentNav('dashboard');
     } else if (currentNav === 'audit' && !canAccessAudit) {
       setCurrentNav('dashboard');
     }
   }, [currentNav, activeRole, canAccessSettings, canAccessAudit]);
+
+  // When active persona/user changes, always reset view to dashboard
+  useEffect(() => {
+    setCurrentNav('dashboard');
+    setSelectedDirId(null);
+  }, [currentUser?.id, currentUser?.username]);
 
   const { data: statsData } = useGetStatsQuery();
   const { data: lettersData, isLoading: isLettersLoading } = useGetLettersQuery({
@@ -2722,7 +2736,7 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* =============================================================
                 VIEW: OFFICIAL STAMPS & SEALS (Module 1 - STAMP)
                 ============================================================= */}
-            {currentNav === 'stamps' && (
+            {currentNav === 'stamps' && activeRole === 'System Admin' && (
               <StampsManager
                 onBackToDashboard={() => setCurrentNav('dashboard')}
               />
@@ -2731,7 +2745,7 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* =============================================================
                 VIEW: SIGNATURES & PKI KEYS (Module 1 - SIG)
                 ============================================================= */}
-            {currentNav === 'signatures' && (
+            {currentNav === 'signatures' && activeRole === 'System Admin' && (
               <SignaturesManager
                 onBackToDashboard={() => setCurrentNav('dashboard')}
               />
@@ -2740,7 +2754,7 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* =============================================================
                 VIEW: DOCUMENT TEMPLATES (Module 2 - TPL)
                 ============================================================= */}
-            {currentNav === 'templates' && (
+            {currentNav === 'templates' && activeRole === 'System Admin' && (
               <TemplatesManager
                 onBackToDashboard={() => setCurrentNav('dashboard')}
               />
@@ -2749,7 +2763,7 @@ export const LetterDashboardLayout: React.FC = () => {
             {/* =============================================================
                 VIEW: ROLES & RBAC PERMISSIONS (Module 3 - RBAC)
                 ============================================================= */}
-            {currentNav === 'roles' && (
+            {currentNav === 'roles' && activeRole === 'System Admin' && (
               <RolesPermissionsManager
                 onBackToDashboard={() => setCurrentNav('dashboard')}
               />
