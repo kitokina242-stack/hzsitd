@@ -206,8 +206,8 @@ export const LetterDashboardLayout: React.FC = () => {
 
   const stats = statsData?.stats;
   const allLetters = lettersData?.letters || [];
-  const directories = dirsData?.directories || [];
-  const allStaffUsers = usersData?.users || [];
+  const directories = dirsData?.directories || dirsData?.data || [];
+  const allStaffUsers = usersData?.users || usersData?.data || [];
 
   // Filtered queues
   const awaitingEndorsement = allLetters.filter(

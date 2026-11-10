@@ -127,14 +127,16 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
   // Guaranteed lists with fallback constants
   const directories = useMemo(() => {
-    return dirsData?.directories && dirsData.directories.length > 0
-      ? dirsData.directories
+    const list = dirsData?.directories || dirsData?.data;
+    return list && list.length > 0
+      ? list
       : FALLBACK_DIRECTORIES;
   }, [dirsData]);
 
   const users = useMemo(() => {
-    return usersData?.users && usersData.users.length > 0
-      ? usersData.users
+    const list = usersData?.users || usersData?.data;
+    return list && list.length > 0
+      ? list
       : FALLBACK_USERS;
   }, [usersData]);
 
