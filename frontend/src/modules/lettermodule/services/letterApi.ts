@@ -61,6 +61,21 @@ export const letterApi = apiSlice.injectEndpoints({
         if (params?.limit) queryParams.set('limit', String(params.limit));
         return `/letters?${queryParams.toString()}`;
       },
+      transformResponse: (response: any) => {
+        const raw = Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.letters)
+          ? response.letters
+          : Array.isArray(response)
+          ? response
+          : [];
+        return {
+          success: response?.success ?? true,
+          count: response?.meta?.total ?? response?.count ?? raw.length,
+          letters: raw,
+          data: raw,
+        };
+      },
       providesTags: ['Letters'],
     }),
 

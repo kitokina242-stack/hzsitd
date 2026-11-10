@@ -205,7 +205,7 @@ export const LetterDashboardLayout: React.FC = () => {
   const [executeAction] = useExecuteLetterActionMutation();
 
   const stats = statsData?.stats;
-  const allLetters = lettersData?.letters || [];
+  const allLetters = lettersData?.letters || lettersData?.data || [];
   const directories = dirsData?.directories || dirsData?.data || [];
   const allStaffUsers = usersData?.users || usersData?.data || [];
 
