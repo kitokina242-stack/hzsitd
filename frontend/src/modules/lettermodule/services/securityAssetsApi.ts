@@ -53,6 +53,24 @@ export const securityAssetsApi = apiSlice.injectEndpoints({
     // Stamps
     getStamps: builder.query<{ success: boolean; data: Stamp[] }, void>({
       query: () => '/stamps',
+      transformResponse: (response: any) => {
+        const raw = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.stamps)
+          ? response.stamps
+          : [];
+        return {
+          success: response?.success ?? true,
+          data: raw.map((s: any) => ({
+            ...s,
+            stamp_id: s.stamp_id ?? s.id,
+            id: s.id ?? s.stamp_id,
+            stamp_name: s.stamp_name || s.name || 'Official Stamp',
+          })),
+        };
+      },
       providesTags: ['Stamps'],
     }),
     createStamp: builder.mutation<
@@ -70,6 +88,24 @@ export const securityAssetsApi = apiSlice.injectEndpoints({
     // Signatures
     getSignatures: builder.query<{ success: boolean; data: Signature[] }, void>({
       query: () => '/signatures',
+      transformResponse: (response: any) => {
+        const raw = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.signatures)
+          ? response.signatures
+          : [];
+        return {
+          success: response?.success ?? true,
+          data: raw.map((sig: any) => ({
+            ...sig,
+            signature_id: sig.signature_id ?? sig.id,
+            id: sig.id ?? sig.signature_id,
+            signature_type: sig.signature_type || 'Digital Cryptographic Signature',
+          })),
+        };
+      },
       providesTags: ['Signatures'],
     }),
     createSignature: builder.mutation<
@@ -87,6 +123,24 @@ export const securityAssetsApi = apiSlice.injectEndpoints({
     // Templates
     getTemplates: builder.query<{ success: boolean; data: LetterTemplate[] }, void>({
       query: () => '/templates',
+      transformResponse: (response: any) => {
+        const raw = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+          ? response.data
+          : Array.isArray(response?.templates)
+          ? response.templates
+          : [];
+        return {
+          success: response?.success ?? true,
+          data: raw.map((t: any) => ({
+            ...t,
+            template_id: t.template_id ?? t.id,
+            id: t.id ?? t.template_id,
+            template_name: t.template_name || t.name || 'Official Letterhead Template',
+          })),
+        };
+      },
       providesTags: ['Templates'],
     }),
     createTemplate: builder.mutation<
