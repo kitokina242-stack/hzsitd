@@ -344,7 +344,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       }
     }
 
-    const owningDirId = currentUser?.directory_id || (isOfficer ? 2 : isLead ? 2 : 1);
+    const owningDirId = currentUser?.directory_id || currentUser?.role_assignments?.[0]?.directory_id || (isOfficer ? 2 : isLead ? 2 : 1);
     let targetDirId = Number(recipientDirectoryId) || (owningDirId === 1 ? 2 : 1);
     let targetUserId = Number(assignedOfficerId) || 2;
 
@@ -361,7 +361,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
     if (sourceType === 'generated') {
       formData.append('letter_content', body.trim() || '<p>Official Correspondence</p>');
-      formData.append('template_id', String(selectedTemplateId || 1));
+      formData.append('template_id', String(selectedTemplateId || 5));
     }
 
     formData.append('source_type', sourceType);
@@ -371,16 +371,10 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     formData.append('received_directory_id', String(targetDirId));
     formData.append('received_by', String(targetUserId));
 
-    if (direction === 'INCOMING') {
-      formData.append('signature_id', '1');
-      formData.append('stamp_id', '1');
-    } else if (isOfficer) {
-      formData.append('signature_id', String(selectedSignatureId || 3));
-      formData.append('stamp_id', String(selectedStampId || 2));
-    } else {
-      formData.append('signature_id', String(selectedSignatureId));
-      formData.append('stamp_id', String(selectedStampId));
-    }
+    const effectiveSigId = selectedSignatureId || (isOfficer ? 3 : 1);
+    const effectiveStampId = selectedStampId || (isOfficer ? 2 : 1);
+    formData.append('signature_id', String(effectiveSigId));
+    formData.append('stamp_id', String(effectiveStampId));
 
     formData.append('letter_date', new Date().toISOString().split('T')[0]);
     const due = new Date();
