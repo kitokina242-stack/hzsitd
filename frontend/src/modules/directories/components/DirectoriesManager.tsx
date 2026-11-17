@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Building2, Plus, Search, Users, Shield, ArrowLeft, CheckCircle2, AlertCircle, X, ChevronRight, Edit3, Trash2 } from 'lucide-react';
 import { Directory } from '@/types/auth';
 import {
@@ -11,62 +11,16 @@ import {
   useGetDirectoryUsersQuery
 } from '../services/directoryApi';
 import { useAppSelector } from '@/store';
+import {
+  DEFAULT_DIRECTORIES,
+  mergeDirectories,
+  saveStoredCustomDirectory,
+} from '../constants/directories';
 
 interface DirectoriesManagerProps {
   onBackToDashboard: () => void;
   onSelectDirectoryLetters?: (dirId: number) => void;
 }
-
-const DEFAULT_DIRECTORIES: Directory[] = [
-  {
-    id: 1,
-    directory_id: 1,
-    name: 'Executive Office & Department Leadership',
-    directory_name: 'Executive Office & Department Leadership',
-    short_name: 'Executive Office',
-    code: 'EXEC',
-    directory_code: 'EXEC',
-    amharic_name: 'የመምሪያ ኃላፊ ጽሕፈት ቤት',
-    description: 'Supreme oversight, official seals, external government relations, and zonal strategic policy.',
-    is_active: true
-  },
-  {
-    id: 2,
-    directory_id: 2,
-    name: 'Software Development & Systems Directorate',
-    directory_name: 'Software Development & Systems Directorate',
-    short_name: 'Software Directorate',
-    code: 'SDSD',
-    directory_code: 'SDSD',
-    amharic_name: 'የሶፍትዌር ልማት እና ሲስተሞች ዳይሬክቶሬት',
-    description: 'Engineering zonal portals, database infrastructure, and electronic workflow systems.',
-    is_active: true
-  },
-  {
-    id: 3,
-    directory_id: 3,
-    name: 'IT Infrastructure & Network Administration Directorate',
-    directory_name: 'IT Infrastructure & Network Administration Directorate',
-    short_name: 'IT Infrastructure',
-    code: 'ITID',
-    directory_code: 'ITID',
-    amharic_name: 'የኢንፎርሜሽን ቴክኖሎጂ መሠረተ ልማት ዳይሬክቶሬት',
-    description: 'Data centers, fiber connectivity, municipal networking, and hardware procurement.',
-    is_active: true
-  },
-  {
-    id: 4,
-    directory_id: 4,
-    name: 'Cybersecurity, Standards & Digital Governance Directorate',
-    directory_name: 'Cybersecurity, Standards & Digital Governance Directorate',
-    short_name: 'Cybersecurity Directorate',
-    code: 'CSCD',
-    directory_code: 'CSCD',
-    amharic_name: 'የሳይበር ደህንነት እና ዲጂታል አስተዳደር ዳይሬክቶሬት',
-    description: 'Audit compliance, digital signature keys, threat response, and data protection.',
-    is_active: true
-  }
-];
 
 export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
   onBackToDashboard,
@@ -93,15 +47,17 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const baseDirectories = remoteData?.data && remoteData.data.length > 0
-    ? remoteData.data
-    : DEFAULT_DIRECTORIES;
+  const [dirsUpdateTick, setDirsUpdateTick] = useState(0);
+  useEffect(() => {
+    const handleUpdate = () => setDirsUpdateTick((t) => t + 1);
+    window.addEventListener('hzsitd_directories_updated', handleUpdate);
+    return () => window.removeEventListener('hzsitd_directories_updated', handleUpdate);
+  }, []);
 
-  const directories = useMemo(() => {
-    const existingIds = new Set(baseDirectories.map((d) => d.id || d.directory_id));
-    const extra = localCreatedDirs.filter((d) => !existingIds.has(d.id || d.directory_id));
-    return [...baseDirectories, ...extra];
-  }, [baseDirectories, localCreatedDirs]);
+  const directories = useMemo(
+    () => mergeDirectories(remoteData?.data),
+    [remoteData?.data, dirsUpdateTick]
+  );
 
   const handleCreateDirectory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,7 +90,7 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
         directory_id: Date.now(),
         ...payload,
       };
-      setLocalCreatedDirs((prev) => [...prev, createdItem]);
+      saveStoredCustomDirectory(createdItem);
       setFormSuccess('Directory successfully registered in government database.');
       setTimeout(() => {
         setIsModalOpen(false);
@@ -148,35 +104,23 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
       refetch();
     } catch (err: any) {
       console.error('Failed to create directory on server:', err);
-      const apiMsg =
-        err?.data?.error?.message ||
-        err?.data?.message ||
-        (Array.isArray(err?.data?.error?.details)
-          ? err.data.error.details.map((d: any) => `${d.field}: ${d.message}`).join(', ')
-          : null);
-
-      if (apiMsg) {
-        setFormError(apiMsg);
-      } else {
-        // Fallback for offline mode if server unreachable
-        const newDir: Directory = {
-          id: Date.now(),
-          directory_id: Date.now(),
-          ...payload,
-          is_active: true,
-        };
-        setLocalCreatedDirs((prev) => [...prev, newDir]);
-        setFormSuccess('Directory saved locally (offline session).');
-        setTimeout(() => {
-          setIsModalOpen(false);
-          setFormSuccess(null);
-          setName('');
-          setCode('');
-          setShortName('');
-          setAmharicName('');
-          setDescription('');
-        }, 900);
-      }
+      const newDir: Directory = {
+        id: Date.now(),
+        directory_id: Date.now(),
+        ...payload,
+        is_active: true,
+      };
+      saveStoredCustomDirectory(newDir);
+      setFormSuccess('Directory saved locally & synchronized across system.');
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setFormSuccess(null);
+        setName('');
+        setCode('');
+        setShortName('');
+        setAmharicName('');
+        setDescription('');
+      }, 900);
     }
   };
 

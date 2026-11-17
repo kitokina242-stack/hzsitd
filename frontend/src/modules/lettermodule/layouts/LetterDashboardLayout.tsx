@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAppSelector, useAppDispatch } from '@/store';
@@ -12,6 +12,7 @@ import {
   WorkflowAction,
 } from '../services/letterApi';
 import { useGetDirectoriesQuery, useGetUsersQuery } from '@/modules/authmodule/services/authApi';
+import { mergeDirectories } from '@/modules/directories/constants/directories';
 import { Letter } from '@/types/letter';
 import { MetricCard } from '../components/MetricCard';
 import { LetterTable } from '../components/LetterTable';
@@ -204,9 +205,19 @@ export const LetterDashboardLayout: React.FC = () => {
   const { data: usersData } = useGetUsersQuery();
   const [executeAction] = useExecuteLetterActionMutation();
 
+  const [dirsUpdateTick, setDirsUpdateTick] = useState(0);
+  useEffect(() => {
+    const handleUpdate = () => setDirsUpdateTick((t) => t + 1);
+    window.addEventListener('hzsitd_directories_updated', handleUpdate);
+    return () => window.removeEventListener('hzsitd_directories_updated', handleUpdate);
+  }, []);
+
   const stats = statsData?.stats;
   const allLetters = lettersData?.letters || lettersData?.data || [];
-  const directories = dirsData?.directories || dirsData?.data || [];
+  const directories = useMemo(
+    () => mergeDirectories(dirsData?.directories || dirsData?.data),
+    [dirsData, dirsUpdateTick]
+  );
   const allStaffUsers = usersData?.users || usersData?.data || [];
 
   // Filtered queues

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users,
   UserPlus,
@@ -34,6 +34,7 @@ import {
   useResetUserPasswordByAdminMutation
 } from '../services/userManagementApi';
 import { useGetDirectoriesListQuery } from '@/modules/directories/services/directoryApi';
+import { mergeDirectories } from '@/modules/directories/constants/directories';
 import { useAppSelector } from '@/store';
 
 interface UsersManagerProps {
@@ -147,6 +148,19 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [resetSuccess, setResetSuccess] = useState<string | null>(null);
 
+  // Synchronize directories across custom additions and defaults
+  const [dirsUpdateTick, setDirsUpdateTick] = useState(0);
+  useEffect(() => {
+    const handleUpdate = () => setDirsUpdateTick((t) => t + 1);
+    window.addEventListener('hzsitd_directories_updated', handleUpdate);
+    return () => window.removeEventListener('hzsitd_directories_updated', handleUpdate);
+  }, []);
+
+  const availableDirectories = useMemo(
+    () => mergeDirectories(directories),
+    [directories, dirsUpdateTick]
+  );
+
   // Form State
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -155,7 +169,10 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   const [phone, setPhone] = useState('');
   const [positionTitle, setPositionTitle] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedDirectoryId, setSelectedDirectoryId] = useState<number>(directories[0]?.id || 1);
+  const [selectedDirectoryId, setSelectedDirectoryId] = useState<number>(() => {
+    const initial = mergeDirectories(directories);
+    return Number(initial[0]?.id || initial[0]?.directory_id || 1);
+  });
   const [selectedRole, setSelectedRole] = useState<UserRole>('Officer');
   const [clearanceLevel, setClearanceLevel] = useState<string>('Level 1 - Standard / Routine');
   const [canSign, setCanSign] = useState<boolean>(false);
@@ -203,14 +220,15 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   };
 
   const handleOpenCreateModal = () => {
+    const defaultDirId = Number(availableDirectories[0]?.id || availableDirectories[0]?.directory_id || 1);
     setFirstName('');
     setLastName('');
     setEmail('');
     setEmployeeNumber(generateNextEmployeeNumber());
     setPhone('+251 91 ');
-    setPositionTitle('');
+    setPositionTitle('Technical Officer');
     setPassword('');
-    setSelectedDirectoryId(directories[0]?.id || directories[0]?.directory_id || 1);
+    setSelectedDirectoryId(defaultDirId);
     setSelectedRole('Officer');
     setClearanceLevel('Level 1 - Standard / Routine');
     setCanSign(false);
@@ -225,40 +243,32 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
 
   const handleRoleChange = (newRole: UserRole) => {
     setSelectedRole(newRole);
-    const selDir = directories.find((d) => (d.id || d.directory_id) === selectedDirectoryId);
+    const selDir = availableDirectories.find((d) => (d.id || d.directory_id) === selectedDirectoryId) || availableDirectories[0];
     if (newRole === 'Department Head') {
       setCanSign(true);
       setCanSeal(true);
       setClearanceLevel('Level 3 - Secret & Executive Directives');
       setIsCrossDirectorate(true);
-      if (!positionTitle || positionTitle.includes('Officer') || positionTitle.includes('Director')) {
-        setPositionTitle('Department Head');
-      }
+      setPositionTitle('Department Head');
     } else if (newRole === 'Directory Lead') {
       setCanSign(true);
       setCanSeal(false);
       setClearanceLevel('Level 2 - Confidential / Directorate Directives');
       setIsCrossDirectorate(false);
-      if (!positionTitle || positionTitle.includes('Officer') || positionTitle.includes('Head')) {
-        setPositionTitle(`Director, ${selDir?.short_name || 'Directorate'}`);
-      }
+      setPositionTitle(`Director, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
     } else if (newRole === 'System Admin') {
       setCanSign(false);
       setCanSeal(false);
       setClearanceLevel('Level 3 - Secret & Executive Directives');
       setIsCrossDirectorate(true);
-      if (!positionTitle || positionTitle.includes('Officer')) {
-        setPositionTitle('IT Systems Administrator');
-      }
+      setPositionTitle('IT Systems Administrator');
     } else {
       // Officer
       setCanSign(false);
       setCanSeal(false);
       setClearanceLevel('Level 1 - Standard / Routine');
       setIsCrossDirectorate(false);
-      if (!positionTitle || positionTitle.includes('Head') || positionTitle.includes('Director')) {
-        setPositionTitle('Technical Officer');
-      }
+      setPositionTitle(`Officer, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
     }
   };
 
@@ -281,9 +291,14 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       return;
     }
 
+    const resolvedDir =
+      availableDirectories.find((d) => (d.id || d.directory_id) === selectedDirectoryId) ||
+      availableDirectories[0];
+    const resolvedDirId = Number(resolvedDir?.id || resolvedDir?.directory_id || selectedDirectoryId);
+
     const resolvedPosition =
       positionTitle.trim() ||
-      `${selectedRole} - ${directories.find((d) => (d.id || d.directory_id) === selectedDirectoryId)?.short_name || 'HZSITD'}`;
+      `${selectedRole} - ${resolvedDir?.short_name || resolvedDir?.name || 'HZSITD'}`;
 
     const payload = {
       first_name: firstName.trim(),
@@ -293,7 +308,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       phone: phone.trim() || undefined,
       password,
       account_status: initialAccountStatus,
-      initial_directory_id: selectedDirectoryId,
+      initial_directory_id: resolvedDirId,
       initial_role_id: selectedRole === 'System Admin' ? 1 : selectedRole === 'Department Head' ? 2 : selectedRole === 'Directory Lead' ? 3 : 4,
       position_title: resolvedPosition,
       clearance_level: clearanceLevel,
@@ -311,7 +326,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
         setFormSuccess(null);
       }, 1000);
     } catch {
-      const selectedDir = directories.find((d) => d.id === selectedDirectoryId || d.directory_id === selectedDirectoryId);
       const newUser: User = {
         id: Date.now(),
         user_id: Date.now(),
@@ -324,8 +338,8 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
         phone: phone.trim() || '+251 91 100 0000',
         role: selectedRole,
         position_title: resolvedPosition,
-        directory_id: selectedDirectoryId,
-        directory_name: selectedDir?.name || 'Zonal Directorate',
+        directory_id: resolvedDirId,
+        directory_name: resolvedDir?.name || 'Zonal Directorate',
         account_status: initialAccountStatus,
         clearance_level: clearanceLevel,
         can_sign: canSign,
@@ -823,14 +837,28 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Directorate *</label>
                     <select
                       value={selectedDirectoryId}
-                      onChange={(e) => setSelectedDirectoryId(Number(e.target.value))}
+                      onChange={(e) => {
+                        const newId = Number(e.target.value);
+                        setSelectedDirectoryId(newId);
+                        const selDir = availableDirectories.find((d) => (d.id || d.directory_id) === newId);
+                        if (selectedRole === 'Directory Lead') {
+                          setPositionTitle(`Director, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
+                        } else if (selectedRole === 'Officer') {
+                          setPositionTitle(`Officer, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
+                        }
+                      }}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none font-semibold text-slate-800"
                     >
-                      {directories.map((dir) => (
-                        <option key={dir.id || dir.directory_id} value={dir.id || dir.directory_id}>
-                          {dir.code} - {dir.short_name || dir.name}
-                        </option>
-                      ))}
+                      {availableDirectories.map((dir) => {
+                        const dirId = Number(dir.id || dir.directory_id);
+                        const displayCode = dir.code || dir.directory_code || 'DIR';
+                        const displayName = dir.name || dir.directory_name || dir.short_name || `Directorate #${dirId}`;
+                        return (
+                          <option key={dirId} value={dirId}>
+                            [{displayCode}] {displayName}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
