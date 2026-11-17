@@ -1,7 +1,31 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Users, UserPlus, Search, Shield, ArrowLeft, CheckCircle2, AlertCircle, X, Lock, Key, Mail, Building, Check, Ban, Phone } from 'lucide-react';
+import {
+  Users,
+  UserPlus,
+  Search,
+  Shield,
+  ArrowLeft,
+  CheckCircle2,
+  AlertCircle,
+  X,
+  Lock,
+  Key,
+  Mail,
+  Building,
+  Check,
+  Ban,
+  Phone,
+  RefreshCw,
+  Sparkles,
+  ShieldCheck,
+  FileBadge,
+  Stamp,
+  PenTool,
+  Hash,
+  Briefcase
+} from 'lucide-react';
 import { User, Directory, UserRole, AccountStatus } from '@/types/auth';
 import {
   useGetAdminUsersListQuery,
@@ -129,9 +153,16 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   const [email, setEmail] = useState('');
   const [employeeNumber, setEmployeeNumber] = useState('');
   const [phone, setPhone] = useState('');
+  const [positionTitle, setPositionTitle] = useState('');
   const [password, setPassword] = useState('');
   const [selectedDirectoryId, setSelectedDirectoryId] = useState<number>(directories[0]?.id || 1);
   const [selectedRole, setSelectedRole] = useState<UserRole>('Officer');
+  const [clearanceLevel, setClearanceLevel] = useState<string>('Level 1 - Standard / Routine');
+  const [canSign, setCanSign] = useState<boolean>(false);
+  const [canSeal, setCanSeal] = useState<boolean>(false);
+  const [isCrossDirectorate, setIsCrossDirectorate] = useState<boolean>(false);
+  const [mustChangePassword, setMustChangePassword] = useState<boolean>(true);
+  const [initialAccountStatus, setInitialAccountStatus] = useState<AccountStatus>('active');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
@@ -150,9 +181,95 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
         position_title: u.position_title || 'Government Officer',
         directory_id: u.directory_id,
         directory_name: u.directory_name,
-        account_status: (u.account_status || 'active') as AccountStatus
+        account_status: (u.account_status || 'active') as AccountStatus,
+        clearance_level: u.clearance_level,
+        can_sign: u.can_sign,
+        can_seal: u.can_seal,
+        is_cross_directorate: u.is_cross_directorate,
+        must_change_password: u.must_change_password,
       }))
     : localStaff;
+
+  const generateNextEmployeeNumber = () => {
+    const existingNums = staffList
+      .map((u) => {
+        const match = u.employee_number?.match(/EMP-(\d+)/i);
+        return match ? parseInt(match[1], 10) : null;
+      })
+      .filter((n): n is number => n !== null);
+
+    const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : staffList.length + 1;
+    return `EMP-${String(nextNum).padStart(3, '0')}`;
+  };
+
+  const handleOpenCreateModal = () => {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setEmployeeNumber(generateNextEmployeeNumber());
+    setPhone('+251 91 ');
+    setPositionTitle('');
+    setPassword('');
+    setSelectedDirectoryId(directories[0]?.id || directories[0]?.directory_id || 1);
+    setSelectedRole('Officer');
+    setClearanceLevel('Level 1 - Standard / Routine');
+    setCanSign(false);
+    setCanSeal(false);
+    setIsCrossDirectorate(false);
+    setMustChangePassword(true);
+    setInitialAccountStatus('active');
+    setFormError(null);
+    setFormSuccess(null);
+    setIsModalOpen(true);
+  };
+
+  const handleRoleChange = (newRole: UserRole) => {
+    setSelectedRole(newRole);
+    const selDir = directories.find((d) => (d.id || d.directory_id) === selectedDirectoryId);
+    if (newRole === 'Department Head') {
+      setCanSign(true);
+      setCanSeal(true);
+      setClearanceLevel('Level 3 - Secret & Executive Directives');
+      setIsCrossDirectorate(true);
+      if (!positionTitle || positionTitle.includes('Officer') || positionTitle.includes('Director')) {
+        setPositionTitle('Department Head');
+      }
+    } else if (newRole === 'Directory Lead') {
+      setCanSign(true);
+      setCanSeal(false);
+      setClearanceLevel('Level 2 - Confidential / Directorate Directives');
+      setIsCrossDirectorate(false);
+      if (!positionTitle || positionTitle.includes('Officer') || positionTitle.includes('Head')) {
+        setPositionTitle(`Director, ${selDir?.short_name || 'Directorate'}`);
+      }
+    } else if (newRole === 'System Admin') {
+      setCanSign(false);
+      setCanSeal(false);
+      setClearanceLevel('Level 3 - Secret & Executive Directives');
+      setIsCrossDirectorate(true);
+      if (!positionTitle || positionTitle.includes('Officer')) {
+        setPositionTitle('IT Systems Administrator');
+      }
+    } else {
+      // Officer
+      setCanSign(false);
+      setCanSeal(false);
+      setClearanceLevel('Level 1 - Standard / Routine');
+      setIsCrossDirectorate(false);
+      if (!positionTitle || positionTitle.includes('Head') || positionTitle.includes('Director')) {
+        setPositionTitle('Technical Officer');
+      }
+    }
+  };
+
+  const handleGeneratePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%';
+    let generated = 'HZS@';
+    for (let i = 0; i < 6; i++) {
+      generated += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(generated);
+  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +281,10 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       return;
     }
 
+    const resolvedPosition =
+      positionTitle.trim() ||
+      `${selectedRole} - ${directories.find((d) => (d.id || d.directory_id) === selectedDirectoryId)?.short_name || 'HZSITD'}`;
+
     const payload = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
@@ -171,9 +292,15 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       employee_number: employeeNumber.trim() || undefined,
       phone: phone.trim() || undefined,
       password,
-      account_status: 'active' as AccountStatus,
+      account_status: initialAccountStatus,
       initial_directory_id: selectedDirectoryId,
-      initial_role_id: selectedRole === 'System Admin' ? 1 : selectedRole === 'Department Head' ? 2 : selectedRole === 'Directory Lead' ? 3 : 4
+      initial_role_id: selectedRole === 'System Admin' ? 1 : selectedRole === 'Department Head' ? 2 : selectedRole === 'Directory Lead' ? 3 : 4,
+      position_title: resolvedPosition,
+      clearance_level: clearanceLevel,
+      can_sign: canSign,
+      can_seal: canSeal,
+      is_cross_directorate: isCrossDirectorate,
+      must_change_password: mustChangePassword,
     };
 
     try {
@@ -188,18 +315,23 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       const newUser: User = {
         id: Date.now(),
         user_id: Date.now(),
-        employee_number: employeeNumber || `EMP-${Math.floor(Math.random() * 900) + 100}`,
-        first_name: firstName,
-        last_name: lastName,
-        full_name: `${firstName} ${lastName}`.trim(),
+        employee_number: employeeNumber.trim() || generateNextEmployeeNumber(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
         username: email.split('@')[0],
-        email,
-        phone: phone || '+251 91 100 0000',
+        email: email.trim(),
+        phone: phone.trim() || '+251 91 100 0000',
         role: selectedRole,
-        position_title: `${selectedRole} - ${selectedDir?.short_name || 'HZSITD'}`,
+        position_title: resolvedPosition,
         directory_id: selectedDirectoryId,
         directory_name: selectedDir?.name || 'Zonal Directorate',
-        account_status: 'active'
+        account_status: initialAccountStatus,
+        clearance_level: clearanceLevel,
+        can_sign: canSign,
+        can_seal: canSeal,
+        is_cross_directorate: isCrossDirectorate,
+        must_change_password: mustChangePassword,
       };
       setLocalStaff((prev) => [newUser, ...prev]);
       setFormSuccess('Officer added (local session synced).');
@@ -214,6 +346,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
     setEmail('');
     setEmployeeNumber('');
     setPhone('');
+    setPositionTitle('');
     setPassword('');
   };
 
@@ -308,7 +441,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
               )}
               <button
                 type="button"
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleOpenCreateModal}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition shadow-sm cursor-pointer"
               >
                 <UserPlus className="w-4 h-4" />
@@ -442,6 +575,26 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                       <span className="text-slate-700">{user.phone}</span>
                     </div>
                   )}
+                  {user.clearance_level && (
+                    <div className="flex justify-between text-slate-500">
+                      <span>Clearance:</span>
+                      <span className="text-slate-800 font-medium truncate max-w-[170px]">{user.clearance_level.split('-')[0].trim()}</span>
+                    </div>
+                  )}
+                  {(user.can_sign || user.can_seal) && (
+                    <div className="flex items-center gap-1.5 pt-1.5 text-[10px] text-slate-600 font-semibold border-t border-slate-100">
+                      {user.can_sign && (
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
+                          <PenTool className="w-2.5 h-2.5" /> Signatory
+                        </span>
+                      )}
+                      {user.can_seal && (
+                        <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-200">
+                          <Stamp className="w-2.5 h-2.5" /> Seal Custodian
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -510,142 +663,345 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       {/* Create User Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/80">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/90 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shadow-xs">
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">Register Civil Servant Account</h3>
-                  <p className="text-xs text-slate-500">Create credentials and assign directory clearance</p>
+                  <p className="text-xs text-slate-500">Create credentials, assign directory clearance, and configure governance privileges</p>
                 </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 p-1">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-6 space-y-3.5">
+            {/* Scrollable Form Body */}
+            <form onSubmit={handleCreateUser} className="flex-1 overflow-y-auto p-6 space-y-6">
               {formSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex gap-2 items-center">
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex gap-2.5 items-center">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>{formSuccess}</span>
+                  <span className="font-medium">{formSuccess}</span>
                 </div>
               )}
               {formError && (
-                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex gap-2 items-center">
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex gap-2.5 items-center">
                   <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span>{formError}</span>
+                  <span className="font-medium">{formError}</span>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    placeholder="e.g. Dawit"
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
+              {/* SECTION 1: CIVIL SERVANT IDENTITY */}
+              <div className="space-y-3.5">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Section 1: Civil Servant Identity &amp; Designation
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name *</label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    placeholder="e.g. Tadesse"
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="e.g. Dawit"
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name *</label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="e.g. Tadesse"
+                      required
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Official Email *</label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="name@hzsitd.gov.et"
+                        required
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                      <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Official Phone Number</label>
+                    <div className="relative">
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+251 91 100 0000"
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                      <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Staff / Employee ID</label>
+                      <button
+                        type="button"
+                        onClick={() => setEmployeeNumber(generateNextEmployeeNumber())}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 hover:text-purple-800 transition cursor-pointer"
+                        title="Auto-calculate next sequential ID"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>Auto-Assign</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={employeeNumber}
+                        onChange={(e) => setEmployeeNumber(e.target.value)}
+                        placeholder="EMP-010"
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                      <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Auto-generated sequential ID. Editable to link with Civil Service HR dossier.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Exact Position / Designation Title</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={positionTitle}
+                        onChange={(e) => setPositionTitle(e.target.value)}
+                        placeholder="e.g. Senior Network Infrastructure Officer"
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                      <Briefcase className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">
+                      Appears on official letterheads, minute routing, and digital stamps.
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Official Email *</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@hzsitd.gov.et"
-                    required
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
+              {/* SECTION 2: ORGANIZATIONAL CLEARANCE & RBAC */}
+              <div className="space-y-3.5">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Section 2: Organizational Clearance &amp; Governance RBAC
+                  </span>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Employee Number</label>
-                  <input
-                    type="text"
-                    value={employeeNumber}
-                    onChange={(e) => setEmployeeNumber(e.target.value)}
-                    placeholder="EMP-1042"
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Directorate *</label>
+                    <select
+                      value={selectedDirectoryId}
+                      onChange={(e) => setSelectedDirectoryId(Number(e.target.value))}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none font-semibold text-slate-800"
+                    >
+                      {directories.map((dir) => (
+                        <option key={dir.id || dir.directory_id} value={dir.id || dir.directory_id}>
+                          {dir.code} - {dir.short_name || dir.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Official Role Tier *</label>
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => handleRoleChange(e.target.value as UserRole)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none font-semibold text-slate-800"
+                    >
+                      <option value="Officer">Officer (Civil Servant Desk)</option>
+                      <option value="Directory Lead">Directory Lead (Director / Operational Head)</option>
+                      <option value="Department Head">Department Head (Executive Authority)</option>
+                      <option value="System Admin">System Admin (IT Administrator)</option>
+                    </select>
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Assign Directorate *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Confidentiality &amp; Document Clearance Level
+                  </label>
                   <select
-                    value={selectedDirectoryId}
-                    onChange={(e) => setSelectedDirectoryId(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold text-slate-800"
+                    value={clearanceLevel}
+                    onChange={(e) => setClearanceLevel(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800"
                   >
-                    {directories.map((dir) => (
-                      <option key={dir.id || dir.directory_id} value={dir.id || dir.directory_id}>
-                        {dir.code} - {dir.short_name || dir.name}
-                      </option>
-                    ))}
+                    <option value="Level 1 - Standard / Routine">Level 1 - Standard / Routine Correspondence</option>
+                    <option value="Level 2 - Confidential / Directorate Directives">Level 2 - Confidential / Directorate Directives</option>
+                    <option value="Level 3 - Secret & Executive Directives">Level 3 - Secret &amp; Executive Directives</option>
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Official Role *</label>
-                  <select
-                    value={selectedRole}
-                    onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold text-slate-800"
-                  >
-                    <option value="Officer">Officer</option>
-                    <option value="Directory Lead">Directory Lead</option>
-                    <option value="Department Head">Department Head</option>
-                    <option value="System Admin">System Admin</option>
-                  </select>
+                {/* Governance Authority Toggles */}
+                <div className="space-y-2 pt-1">
+                  <label className="block text-xs font-semibold text-slate-700">Governance &amp; Authority Privileges</label>
+                  <div className="grid grid-cols-1 gap-2">
+                    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={canSign}
+                        onChange={(e) => setCanSign(e.target.checked)}
+                        className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      <div className="text-xs">
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <PenTool className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Authorized Outgoing Signatory</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Grants legal rights to affix digital cryptographic signatures to outbound correspondence.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={canSeal}
+                        onChange={(e) => setCanSeal(e.target.checked)}
+                        className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      <div className="text-xs">
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <Stamp className="w-3.5 h-3.5 text-blue-600" />
+                          <span>Official Seal &amp; Stamp Custodian</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Authorizes application of the authentic HZSITD departmental seal to finalized letters.
+                        </p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition">
+                      <input
+                        type="checkbox"
+                        checked={isCrossDirectorate}
+                        onChange={(e) => setIsCrossDirectorate(e.target.checked)}
+                        className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
+                      />
+                      <div className="text-xs">
+                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                          <Building className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Cross-Directorate Reviewer Clearance</span>
+                        </div>
+                        <p className="text-slate-500 text-[11px] mt-0.5">
+                          Grants cross-directorate inspection clearance (required for Legal, Internal Audit, and Exec Staff).
+                        </p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Temporary Password *</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 8 characters"
-                  required
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
+              {/* SECTION 3: SECURITY & ONBOARDING CREDENTIALS */}
+              <div className="space-y-3.5">
+                <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Section 3: Security &amp; Onboarding Credentials
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-semibold text-slate-700">Temporary Password *</label>
+                      <button
+                        type="button"
+                        onClick={handleGeneratePassword}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 hover:text-purple-800 transition cursor-pointer"
+                        title="Generate a random secure temporary password"
+                      >
+                        <Sparkles className="w-2.5 h-2.5" />
+                        <span>Generate</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Min. 8 characters"
+                        required
+                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                      <Lock className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Initial Account Status</label>
+                    <select
+                      value={initialAccountStatus}
+                      onChange={(e) => setInitialAccountStatus(e.target.value as AccountStatus)}
+                      className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 font-medium"
+                    >
+                      <option value="active">Active (Immediate Login Permitted)</option>
+                      <option value="pending">Pending HR / Biometric Verification</option>
+                    </select>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer pt-1">
+                  <input
+                    type="checkbox"
+                    checked={mustChangePassword}
+                    onChange={(e) => setMustChangePassword(e.target.checked)}
+                    className="rounded text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="font-medium">
+                    Require officer to change password upon first login (Recommended for audit compliance)
+                  </span>
+                </label>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
+              {/* Modal Actions */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm disabled:opacity-60 cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-sm disabled:opacity-60 transition cursor-pointer flex items-center gap-2"
                 >
-                  {isCreating ? 'Creating Account...' : 'Register Officer'}
+                  <UserPlus className="w-4 h-4" />
+                  <span>{isCreating ? 'Provisioning Account...' : 'Register Officer & Provision Access'}</span>
                 </button>
               </div>
             </form>

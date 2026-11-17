@@ -11,6 +11,12 @@ export interface CreateAdminUserRequest {
   account_status?: AccountStatus;
   initial_role_id?: number;
   initial_directory_id?: number;
+  position_title?: string;
+  clearance_level?: string;
+  can_sign?: boolean;
+  can_seal?: boolean;
+  is_cross_directorate?: boolean;
+  must_change_password?: boolean;
 }
 
 export interface Role {

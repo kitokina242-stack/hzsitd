@@ -26,6 +26,11 @@ export interface User {
   account_status?: AccountStatus;
   role_assignments?: RoleAssignment[];
   permissions?: string[];
+  clearance_level?: string;
+  can_sign?: boolean;
+  can_seal?: boolean;
+  is_cross_directorate?: boolean;
+  must_change_password?: boolean;
   avatar_url?: string;
   signature_url?: string;
   stamp_url?: string;
