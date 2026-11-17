@@ -231,6 +231,10 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       setSubject(initialSubject);
       setBody(initialBody);
 
+      const defaultSigId = signatures[0]?.signature_id || 1;
+      const defaultStampId = stamps[0]?.stamp_id || 1;
+      const defaultTmplId = templates[0]?.template_id || 5;
+
       if (isOfficer) {
         setDirection('OUTGOING');
         const myLead = users.find((u) => u.role === 'Directory Lead' && u.directory_id === (currentUser?.directory_id || 2));
@@ -241,23 +245,23 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           setAssignedOfficerId(2);
           setRecipientDirectoryId(2);
         }
-        setSelectedSignatureId(3);
-        setSelectedStampId(2);
-        setSelectedTemplateId(3);
+        setSelectedSignatureId(defaultSigId);
+        setSelectedStampId(defaultStampId);
+        setSelectedTemplateId(defaultTmplId);
       } else if (isLead) {
         const otherDir = directories.find((d) => d.id !== (currentUser?.directory_id || 2)) || directories[0];
         setRecipientDirectoryId(otherDir.id);
-        setSelectedSignatureId(2);
-        setSelectedStampId(2);
-        setSelectedTemplateId(3);
+        setSelectedSignatureId(defaultSigId);
+        setSelectedStampId(defaultStampId);
+        setSelectedTemplateId(defaultTmplId);
       } else if (isExecutive) {
-        setSelectedSignatureId(1);
-        setSelectedStampId(1);
-        setSelectedTemplateId(1);
+        setSelectedSignatureId(defaultSigId);
+        setSelectedStampId(defaultStampId);
+        setSelectedTemplateId(defaultTmplId);
         setRecipientDirectoryId(2);
       }
     }
-  }, [isOpen, initialSubject, initialBody, isOfficer, isLead, isExecutive, directories, users, currentUser?.directory_id]);
+  }, [isOpen, initialSubject, initialBody, isOfficer, isLead, isExecutive, directories, users, currentUser?.directory_id, signatures, stamps, templates]);
 
   if (!isOpen) return null;
 
@@ -359,9 +363,10 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     formData.append('subject', subject.trim());
     formData.append('description', body.trim().slice(0, 160) || 'Official correspondence');
 
+    const effectiveTmplId = selectedTemplateId || templates[0]?.template_id || 5;
     if (sourceType === 'generated') {
       formData.append('letter_content', body.trim() || '<p>Official Correspondence</p>');
-      formData.append('template_id', String(selectedTemplateId || 5));
+      formData.append('template_id', String(effectiveTmplId));
     }
 
     formData.append('source_type', sourceType);
@@ -371,8 +376,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     formData.append('received_directory_id', String(targetDirId));
     formData.append('received_by', String(targetUserId));
 
-    const effectiveSigId = selectedSignatureId || (isOfficer ? 3 : 1);
-    const effectiveStampId = selectedStampId || (isOfficer ? 2 : 1);
+    const effectiveSigId = selectedSignatureId || signatures[0]?.signature_id || 1;
+    const effectiveStampId = selectedStampId || stamps[0]?.stamp_id || 1;
     formData.append('signature_id', String(effectiveSigId));
     formData.append('stamp_id', String(effectiveStampId));
 

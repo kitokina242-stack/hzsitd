@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Building2, Plus, Search, Users, Shield, ArrowLeft, CheckCircle2, AlertCircle, X, ChevronRight, Edit3, Trash2 } from 'lucide-react';
 import { Directory } from '@/types/auth';
 import {
   useGetDirectoriesListQuery,
   useCreateDirectoryMutation,
+  useUpdateDirectoryMutation,
   useDeactivateDirectoryMutation,
   useGetDirectoryUsersQuery
 } from '../services/directoryApi';
@@ -21,8 +22,10 @@ const DEFAULT_DIRECTORIES: Directory[] = [
     id: 1,
     directory_id: 1,
     name: 'Executive Office & Department Leadership',
+    directory_name: 'Executive Office & Department Leadership',
     short_name: 'Executive Office',
     code: 'EXEC',
+    directory_code: 'EXEC',
     amharic_name: 'የመምሪያ ኃላፊ ጽሕፈት ቤት',
     description: 'Supreme oversight, official seals, external government relations, and zonal strategic policy.',
     is_active: true
@@ -31,8 +34,10 @@ const DEFAULT_DIRECTORIES: Directory[] = [
     id: 2,
     directory_id: 2,
     name: 'Software Development & Systems Directorate',
+    directory_name: 'Software Development & Systems Directorate',
     short_name: 'Software Directorate',
     code: 'SDSD',
+    directory_code: 'SDSD',
     amharic_name: 'የሶፍትዌር ልማት እና ሲስተሞች ዳይሬክቶሬት',
     description: 'Engineering zonal portals, database infrastructure, and electronic workflow systems.',
     is_active: true
@@ -41,8 +46,10 @@ const DEFAULT_DIRECTORIES: Directory[] = [
     id: 3,
     directory_id: 3,
     name: 'IT Infrastructure & Network Administration Directorate',
+    directory_name: 'IT Infrastructure & Network Administration Directorate',
     short_name: 'IT Infrastructure',
     code: 'ITID',
+    directory_code: 'ITID',
     amharic_name: 'የኢንፎርሜሽን ቴክኖሎጂ መሠረተ ልማት ዳይሬክቶሬት',
     description: 'Data centers, fiber connectivity, municipal networking, and hardware procurement.',
     is_active: true
@@ -51,8 +58,10 @@ const DEFAULT_DIRECTORIES: Directory[] = [
     id: 4,
     directory_id: 4,
     name: 'Cybersecurity, Standards & Digital Governance Directorate',
+    directory_name: 'Cybersecurity, Standards & Digital Governance Directorate',
     short_name: 'Cybersecurity Directorate',
     code: 'CSCD',
+    directory_code: 'CSCD',
     amharic_name: 'የሳይበር ደህንነት እና ዲጂታል አስተዳደር ዳይሬክቶሬት',
     description: 'Audit compliance, digital signature keys, threat response, and data protection.',
     is_active: true
@@ -64,16 +73,16 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
   onSelectDirectoryLetters
 }) => {
   const activeRole = useAppSelector((state) => state.auth.activeRole);
-  const isAdmin = activeRole === 'System Admin';
+  const isAdmin = activeRole === 'System Admin' || activeRole === 'Department Head';
 
-  const { data: remoteData, isLoading } = useGetDirectoriesListQuery();
+  const { data: remoteData, isLoading, refetch } = useGetDirectoriesListQuery();
   const [createDirectoryApi, { isLoading: isCreating }] = useCreateDirectoryMutation();
+  const [updateDirectoryApi] = useUpdateDirectoryMutation();
   const [deactivateApi] = useDeactivateDirectoryMutation();
 
-  const [localDirs, setLocalDirs] = useState<Directory[]>(DEFAULT_DIRECTORIES);
+  const [localCreatedDirs, setLocalCreatedDirs] = useState<Directory[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDirForUsers, setSelectedDirForUsers] = useState<Directory | null>(null);
 
   // Form State
   const [name, setName] = useState('');
@@ -84,73 +93,123 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const directories = remoteData?.data && remoteData.data.length > 0
+  const baseDirectories = remoteData?.data && remoteData.data.length > 0
     ? remoteData.data
-    : localDirs;
+    : DEFAULT_DIRECTORIES;
+
+  const directories = useMemo(() => {
+    const existingIds = new Set(baseDirectories.map((d) => d.id || d.directory_id));
+    const extra = localCreatedDirs.filter((d) => !existingIds.has(d.id || d.directory_id));
+    return [...baseDirectories, ...extra];
+  }, [baseDirectories, localCreatedDirs]);
 
   const handleCreateDirectory = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
     setFormSuccess(null);
 
-    if (!name.trim() || !code.trim()) {
+    const trimmedName = name.trim();
+    const trimmedCode = code.trim().toUpperCase();
+
+    if (!trimmedName || !trimmedCode) {
       setFormError('Both Department Name and Code are required.');
       return;
     }
 
     const payload = {
-      name: name.trim(),
-      code: code.trim().toUpperCase(),
-      short_name: shortName.trim() || name.trim(),
+      name: trimmedName,
+      directory_name: trimmedName,
+      code: trimmedCode,
+      directory_code: trimmedCode,
+      short_name: shortName.trim() || trimmedName,
       amharic_name: amharicName.trim() || undefined,
-      description: description.trim() || undefined
+      description: description.trim() || undefined,
+      is_active: true,
     };
 
     try {
-      await createDirectoryApi(payload).unwrap();
+      const res = await createDirectoryApi(payload).unwrap();
+      const createdItem: Directory = res?.data || {
+        id: Date.now(),
+        directory_id: Date.now(),
+        ...payload,
+      };
+      setLocalCreatedDirs((prev) => [...prev, createdItem]);
       setFormSuccess('Directory successfully registered in government database.');
       setTimeout(() => {
         setIsModalOpen(false);
         setFormSuccess(null);
-      }, 1000);
-    } catch {
-      // Local offline fallback
-      const newDir: Directory = {
-        id: Date.now(),
-        directory_id: Date.now(),
-        ...payload,
-        is_active: true
-      };
-      setLocalDirs((prev) => [...prev, newDir]);
-      setFormSuccess('Directory added (local session synced).');
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setFormSuccess(null);
-      }, 1000);
-    }
+        setName('');
+        setCode('');
+        setShortName('');
+        setAmharicName('');
+        setDescription('');
+      }, 900);
+      refetch();
+    } catch (err: any) {
+      console.error('Failed to create directory on server:', err);
+      const apiMsg =
+        err?.data?.error?.message ||
+        err?.data?.message ||
+        (Array.isArray(err?.data?.error?.details)
+          ? err.data.error.details.map((d: any) => `${d.field}: ${d.message}`).join(', ')
+          : null);
 
-    setName('');
-    setCode('');
-    setShortName('');
-    setAmharicName('');
-    setDescription('');
+      if (apiMsg) {
+        setFormError(apiMsg);
+      } else {
+        // Fallback for offline mode if server unreachable
+        const newDir: Directory = {
+          id: Date.now(),
+          directory_id: Date.now(),
+          ...payload,
+          is_active: true,
+        };
+        setLocalCreatedDirs((prev) => [...prev, newDir]);
+        setFormSuccess('Directory saved locally (offline session).');
+        setTimeout(() => {
+          setIsModalOpen(false);
+          setFormSuccess(null);
+          setName('');
+          setCode('');
+          setShortName('');
+          setAmharicName('');
+          setDescription('');
+        }, 900);
+      }
+    }
   };
 
-  const handleDeactivate = async (id: number) => {
+  const handleToggleActive = async (dir: Directory) => {
+    const dirId = dir.id || dir.directory_id;
+    if (!dirId) return;
+    const nextActive = dir.is_active === false;
     try {
-      await deactivateApi(id).unwrap();
+      if (nextActive) {
+        await updateDirectoryApi({ id: dirId, data: { is_active: true } }).unwrap();
+      } else {
+        await deactivateApi(dirId).unwrap();
+      }
+      refetch();
     } catch {
-      setLocalDirs((prev) =>
-        prev.map((d) => (d.id === id || d.directory_id === id ? { ...d, is_active: !d.is_active } : d))
+      setLocalCreatedDirs((prev) =>
+        prev.map((d) =>
+          d.id === dirId || d.directory_id === dirId
+            ? { ...d, is_active: nextActive }
+            : d
+        )
       );
     }
   };
 
-  const filteredDirectories = directories.filter((d) =>
-    d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (d.amharic_name && d.amharic_name.includes(searchQuery))
-  );
+  const filteredDirectories = directories.filter((d) => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    const nameMatch = (d.name || d.directory_name || '').toLowerCase().includes(q);
+    const codeMatch = (d.code || d.directory_code || '').toLowerCase().includes(q);
+    const amharicMatch = d.amharic_name ? d.amharic_name.includes(searchQuery) : false;
+    return nameMatch || codeMatch || amharicMatch;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in font-sans">
@@ -181,7 +240,11 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
           {isAdmin && (
             <button
               type="button"
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setFormError(null);
+                setFormSuccess(null);
+                setIsModalOpen(true);
+              }}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 transition shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -215,7 +278,7 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
             <div>
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="inline-block px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 font-mono font-bold text-xs">
-                  {dir.code}
+                  {dir.code || dir.directory_code || 'DIR'}
                 </div>
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
@@ -229,7 +292,7 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
               </div>
 
               <h3 className="font-bold text-base text-slate-900 leading-snug">
-                {dir.name}
+                {dir.name || dir.directory_name || `Directorate #${dir.id || dir.directory_id}`}
               </h3>
 
               {dir.amharic_name && (
@@ -238,9 +301,9 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
                 </div>
               )}
 
-              {dir.description && (
+              {(dir.description || dir.short_name) && (
                 <p className="text-xs text-slate-500 mt-2.5 line-clamp-2 leading-relaxed">
-                  {dir.description}
+                  {dir.description || dir.short_name}
                 </p>
               )}
             </div>
@@ -257,17 +320,19 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => handleDeactivate(dir.id || dir.directory_id || 1)}
-                className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
-                  dir.is_active !== false
-                    ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
-                    : 'text-emerald-600 hover:bg-emerald-50'
-                }`}
-              >
-                {dir.is_active !== false ? 'Deactivate' : 'Reactivate'}
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => handleToggleActive(dir)}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                    dir.is_active !== false
+                      ? 'text-slate-500 hover:text-rose-600 hover:bg-rose-50'
+                      : 'text-emerald-600 hover:bg-emerald-50'
+                  }`}
+                >
+                  {dir.is_active !== false ? 'Deactivate' : 'Reactivate'}
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -381,7 +446,7 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -400,4 +465,5 @@ export const DirectoriesManager: React.FC<DirectoriesManagerProps> = ({
     </div>
   );
 };
+
 export default DirectoriesManager;

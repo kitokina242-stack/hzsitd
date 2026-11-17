@@ -165,14 +165,25 @@ export const authApi = apiSlice.injectEndpoints({
           : Array.isArray(response?.directories)
           ? response.directories
           : [];
-        const normalized: Directory[] = rawList.map((d: any) => ({
-          ...d,
-          id: d.id ?? d.directory_id,
-          directory_id: d.directory_id ?? d.id,
-          name: d.name || d.directory_name || `Directorate #${d.id || d.directory_id}`,
-          code: d.code || d.short_name || 'DIR',
-          short_name: d.short_name || d.code || 'DIR',
-        }));
+        const normalized: Directory[] = rawList.map((d: any) => {
+          const id = Number(d.id ?? d.directory_id);
+          const name = d.name || d.directory_name || `Directorate #${id}`;
+          const code = d.code || d.directory_code || d.short_name || 'DIR';
+          return {
+            ...d,
+            id,
+            directory_id: id,
+            name,
+            directory_name: name,
+            code,
+            directory_code: code,
+            short_name: d.short_name || code || name,
+            description: d.description || '',
+            parent_id: d.parent_id ?? d.parent_directory_id ?? null,
+            parent_directory_id: d.parent_directory_id ?? d.parent_id ?? null,
+            is_active: d.is_active !== false,
+          };
+        });
         return {
           success: response?.success ?? true,
           data: normalized,

@@ -35,12 +35,15 @@ export interface Directory {
   id: number;
   directory_id?: number;
   name: string;
-  short_name: string;
+  directory_name?: string;
+  short_name?: string;
   code: string;
+  directory_code?: string;
   amharic_name?: string;
   description?: string;
   head_user_id?: number;
   parent_id?: number | null;
+  parent_directory_id?: number | null;
   is_active?: boolean;
   created_at?: string;
 }

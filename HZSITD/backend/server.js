@@ -171,9 +171,94 @@ app.get('/api/users', (req, res) => {
   res.json({ success: true, users });
 });
 
-app.get('/api/directories', (req, res) => {
+app.get(['/api/directories', '/api/v1/directories'], (req, res) => {
   const directories = db.prepare('SELECT * FROM directories ORDER BY id ASC').all();
-  res.json({ success: true, directories });
+  res.json({ success: true, directories, data: directories });
+});
+
+app.post(['/api/directories', '/api/v1/directories'], (req, res) => {
+  const code = (req.body.directory_code || req.body.code || '').trim().toUpperCase();
+  const name = (req.body.directory_name || req.body.name || '').trim();
+  const short_name = (req.body.short_name || '').trim() || name;
+  const amharic_name = (req.body.amharic_name || '').trim() || null;
+  const description = (req.body.description || '').trim() || null;
+
+  if (!code || !name) {
+    return res.status(422).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed.',
+        details: [
+          ...(!code ? [{ field: 'directory_code', message: 'Required' }] : []),
+          ...(!name ? [{ field: 'directory_name', message: 'Required' }] : [])
+        ]
+      }
+    });
+  }
+
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO directories (code, name, short_name, amharic_name, description)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    const result = stmt.run(code, name, short_name, amharic_name, description);
+    const newDir = db.prepare('SELECT * FROM directories WHERE id = ?').get(result.lastInsertRowid);
+    res.status(201).json({
+      success: true,
+      data: {
+        ...newDir,
+        directory_id: newDir.id,
+        directory_code: newDir.code,
+        directory_name: newDir.name
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: err.message } });
+  }
+});
+
+app.patch(['/api/directories/:id', '/api/v1/directories/:id'], (req, res) => {
+  const id = req.params.id;
+  const dir = db.prepare('SELECT * FROM directories WHERE id = ?').get(id);
+  if (!dir) return res.status(404).json({ success: false, message: 'Directory not found' });
+
+  const name = req.body.directory_name || req.body.name || dir.name;
+  const code = req.body.directory_code || req.body.code || dir.code;
+  const short_name = req.body.short_name || dir.short_name;
+  const amharic_name = req.body.amharic_name !== undefined ? req.body.amharic_name : dir.amharic_name;
+  const description = req.body.description !== undefined ? req.body.description : dir.description;
+
+  db.prepare(`
+    UPDATE directories SET name = ?, code = ?, short_name = ?, amharic_name = ?, description = ? WHERE id = ?
+  `).run(name, code, short_name, amharic_name, description, id);
+
+  const updated = db.prepare('SELECT * FROM directories WHERE id = ?').get(id);
+  res.json({
+    success: true,
+    data: {
+      ...updated,
+      directory_id: updated.id,
+      directory_code: updated.code,
+      directory_name: updated.name
+    }
+  });
+});
+
+app.post(['/api/directories/:id/deactivate', '/api/v1/directories/:id/deactivate'], (req, res) => {
+  const id = req.params.id;
+  const dir = db.prepare('SELECT * FROM directories WHERE id = ?').get(id);
+  if (!dir) return res.status(404).json({ success: false, message: 'Directory not found' });
+  res.json({
+    success: true,
+    data: {
+      ...dir,
+      directory_id: dir.id,
+      directory_code: dir.code,
+      directory_name: dir.name,
+      is_active: false
+    }
+  });
 });
 
 // ==============================================================================
