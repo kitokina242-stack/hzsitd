@@ -66,6 +66,9 @@ html, body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
 }
 
 /* ----- Body Lock ----- */
@@ -78,7 +81,10 @@ body.intro-active {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background: #ffffff;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  color-scheme: light !important;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -157,7 +163,7 @@ body.intro-active {
 .intro-line-en {
   font-family: 'Elegant', 'Georgia', serif;
   font-size: 23px;
-  color: #111111;
+  color: #111111 !important;
   letter-spacing: 0.035em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -167,7 +173,7 @@ body.intro-active {
 .intro-line-am {
   font-family: 'LogaDisplay', 'Nyala', sans-serif;
   font-size: 23px;
-  color: #111111;
+  color: #111111 !important;
   letter-spacing: 0.01em;
   padding-right: 0.35em;
   -webkit-font-smoothing: antialiased;
@@ -290,7 +296,7 @@ body.intro-active {
 /* Line 3: TECHNOLOGY DEPT. — largest, anchored to bottom-left */
 .hero-headline-line.line-3 {
   font-size: clamp(48px, 9.2vw, 132px);
-  color: #111111;
+  color: #111111 !important;
   letter-spacing: -0.02em;
   line-height: 0.88 !important;
   margin: 0 !important;
@@ -320,7 +326,7 @@ body.intro-active {
 .hero-headline-line.line-1 {
   font-family: 'ScienceAndFiction', 'Glorious', sans-serif;
   font-size: clamp(34px, 6.8vw, 98px);
-  color: #111111;
+  color: #111111 !important;
   letter-spacing: 0.02em;
   line-height: 1.05;
   margin: 0 0 0.08em 0;
@@ -378,11 +384,26 @@ body.intro-active {
 .hero-dept-word {
   font-family: 'ScienceAndFiction', 'Glorious', sans-serif;
   font-size: 0.5em !important;
-  color: #111111;
+  color: #111111 !important;
   display: inline-block;
   vertical-align: baseline;
   margin-left: 0.15em;
   letter-spacing: 0.02em;
+}
+
+/* Enforce pure light rendering on banner video and 3D canvases */
+.banner-section {
+  color-scheme: light !important;
+  background-color: #ffffff !important;
+}
+
+.banner-section video,
+#hero-3d-canvas,
+#footer-3d-canvas,
+.scene-3d-wrap canvas {
+  filter: none !important;
+  -webkit-filter: none !important;
+  color-scheme: light !important;
 }
 
 /* Hero bottom alignment — text sits right at the very bottom edge */

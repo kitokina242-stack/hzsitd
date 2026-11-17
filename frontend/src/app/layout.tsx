@@ -22,6 +22,10 @@ const instrumentSerif = Instrument_Serif({
 export const metadata: Metadata = {
   title: 'HZSITD — Official Paperless Letter & Correspondence Portal',
   description: 'Hadiya Zone Science & Information Technology Department Official Digital Workflow, Approval, and QR Letter Verification System',
+  other: {
+    'color-scheme': 'light',
+    'darkreader-lock': 'true',
+  },
 };
 
 export default function RootLayout({
@@ -32,6 +36,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-bs-theme="light"
+      style={{ colorScheme: 'light' }}
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-slate-50 text-slate-900 font-sans antialiased selection:bg-emerald-500 selection:text-white">
