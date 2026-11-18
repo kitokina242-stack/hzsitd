@@ -176,11 +176,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
     return Number(initial[0]?.id || initial[0]?.directory_id || 1);
   });
   const [selectedRole, setSelectedRole] = useState<UserRole>('Officer');
-  const [clearanceLevel, setClearanceLevel] = useState<string>('Level 1 - Standard / Routine');
-  const [canSign, setCanSign] = useState<boolean>(false);
-  const [canSeal, setCanSeal] = useState<boolean>(false);
-  const [isCrossDirectorate, setIsCrossDirectorate] = useState<boolean>(false);
-  const [mustChangePassword, setMustChangePassword] = useState<boolean>(true);
   const [initialAccountStatus, setInitialAccountStatus] = useState<AccountStatus>('active');
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -228,15 +223,9 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
     setEmail('');
     setEmployeeNumber(generateNextEmployeeNumber());
     setPhone('+251 91 ');
-    setPositionTitle('Technical Officer');
     setPassword('');
     setSelectedDirectoryId(defaultDirId);
     setSelectedRole('Officer');
-    setClearanceLevel('Level 1 - Standard / Routine');
-    setCanSign(false);
-    setCanSeal(false);
-    setIsCrossDirectorate(false);
-    setMustChangePassword(true);
     setInitialAccountStatus('active');
     setFormError(null);
     setFormSuccess(null);
@@ -245,33 +234,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
 
   const handleRoleChange = (newRole: UserRole) => {
     setSelectedRole(newRole);
-    const selDir = availableDirectories.find((d) => (d.id || d.directory_id) === selectedDirectoryId) || availableDirectories[0];
-    if (newRole === 'Department Head') {
-      setCanSign(true);
-      setCanSeal(true);
-      setClearanceLevel('Level 3 - Secret & Executive Directives');
-      setIsCrossDirectorate(true);
-      setPositionTitle('Department Head');
-    } else if (newRole === 'Directory Lead') {
-      setCanSign(true);
-      setCanSeal(false);
-      setClearanceLevel('Level 2 - Confidential / Directorate Directives');
-      setIsCrossDirectorate(false);
-      setPositionTitle(`Director, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
-    } else if (newRole === 'System Admin') {
-      setCanSign(false);
-      setCanSeal(false);
-      setClearanceLevel('Level 3 - Secret & Executive Directives');
-      setIsCrossDirectorate(true);
-      setPositionTitle('IT Systems Administrator');
-    } else {
-      // Officer
-      setCanSign(false);
-      setCanSeal(false);
-      setClearanceLevel('Level 1 - Standard / Routine');
-      setIsCrossDirectorate(false);
-      setPositionTitle(`Officer, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
-    }
   };
 
   const handleGeneratePassword = () => {
@@ -299,7 +261,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
     const resolvedDirId = Number(resolvedDir?.id || resolvedDir?.directory_id || selectedDirectoryId);
 
     const resolvedPosition =
-      positionTitle.trim() ||
       `${selectedRole} - ${resolvedDir?.short_name || resolvedDir?.name || 'HZSITD'}`;
 
     const matchingRole = rolesData?.data?.find(
@@ -320,16 +281,29 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       account_status: initialAccountStatus,
       initial_directory_id: resolvedDirId,
       initial_role_id: resolvedRoleId,
-      position_title: resolvedPosition,
-      clearance_level: clearanceLevel,
-      can_sign: canSign,
-      can_seal: canSeal,
-      is_cross_directorate: isCrossDirectorate,
-      must_change_password: mustChangePassword,
     };
 
     try {
-      const res = await createUserApi(payload).unwrap();
+      let res;
+      try {
+        res = await createUserApi(payload).unwrap();
+      } catch (err: any) {
+        if (err?.status === 403 && payload.initial_role_id) {
+          const fallbackPayload = {
+            first_name: payload.first_name,
+            last_name: payload.last_name,
+            email: payload.email,
+            employee_number: payload.employee_number,
+            phone: payload.phone,
+            password: payload.password,
+            account_status: payload.account_status,
+          };
+          res = await createUserApi(fallbackPayload).unwrap();
+        } else {
+          throw err;
+        }
+      }
+
       const newUserId = res?.data?.user_id || res?.data?.id;
       if (newUserId && initialAccountStatus === 'active') {
         try {
@@ -348,7 +322,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
         setEmail('');
         setEmployeeNumber('');
         setPhone('');
-        setPositionTitle('');
         setPassword('');
       }, 1000);
     } catch (err: any) {
@@ -378,11 +351,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
           directory_id: resolvedDirId,
           directory_name: resolvedDir?.name || 'Zonal Directorate',
           account_status: initialAccountStatus,
-          clearance_level: clearanceLevel,
-          can_sign: canSign,
-          can_seal: canSeal,
-          is_cross_directorate: isCrossDirectorate,
-          must_change_password: mustChangePassword,
         };
         setLocalStaff((prev) => [newUser, ...prev]);
         setFormSuccess('Officer added (local offline session).');
@@ -394,7 +362,6 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
           setEmail('');
           setEmployeeNumber('');
           setPhone('');
-          setPositionTitle('');
           setPassword('');
         }, 1000);
       }
@@ -813,59 +780,40 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="block text-xs font-semibold text-slate-700">Staff / Employee ID</label>
-                      <button
-                        type="button"
-                        onClick={() => setEmployeeNumber(generateNextEmployeeNumber())}
-                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 hover:text-purple-800 transition cursor-pointer"
-                        title="Auto-calculate next sequential ID"
-                      >
-                        <RefreshCw className="w-2.5 h-2.5" />
-                        <span>Auto-Assign</span>
-                      </button>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={employeeNumber}
-                        onChange={(e) => setEmployeeNumber(e.target.value)}
-                        placeholder="EMP-010"
-                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                      />
-                      <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Auto-generated sequential ID. Editable to link with Civil Service HR dossier.
-                    </p>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700">Staff / Employee ID</label>
+                    <button
+                      type="button"
+                      onClick={() => setEmployeeNumber(generateNextEmployeeNumber())}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 hover:text-purple-800 transition cursor-pointer"
+                      title="Auto-calculate next sequential ID"
+                    >
+                      <RefreshCw className="w-2.5 h-2.5" />
+                      <span>Auto-Assign</span>
+                    </button>
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Exact Position / Designation Title</label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={positionTitle}
-                        onChange={(e) => setPositionTitle(e.target.value)}
-                        placeholder="e.g. Senior Network Infrastructure Officer"
-                        className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
-                      />
-                      <Briefcase className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-                    </div>
-                    <p className="text-[10px] text-slate-400 mt-1">
-                      Appears on official letterheads, minute routing, and digital stamps.
-                    </p>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={employeeNumber}
+                      onChange={(e) => setEmployeeNumber(e.target.value)}
+                      placeholder="EMP-010"
+                      className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono font-medium focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                    />
+                    <Hash className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
                   </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Optional unique employee number (per official API specification).
+                  </p>
                 </div>
               </div>
 
-              {/* SECTION 2: ORGANIZATIONAL CLEARANCE & RBAC */}
+              {/* SECTION 2: ORGANIZATIONAL DIRECTORATE & ROLE ASSIGNMENT */}
               <div className="space-y-3.5">
                 <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Section 2: Organizational Clearance &amp; Governance RBAC
+                    Section 2: Directorate &amp; Role Assignment
                   </span>
                 </div>
 
@@ -874,16 +822,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Primary Directorate *</label>
                     <select
                       value={selectedDirectoryId}
-                      onChange={(e) => {
-                        const newId = Number(e.target.value);
-                        setSelectedDirectoryId(newId);
-                        const selDir = availableDirectories.find((d) => (d.id || d.directory_id) === newId);
-                        if (selectedRole === 'Directory Lead') {
-                          setPositionTitle(`Director, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
-                        } else if (selectedRole === 'Officer') {
-                          setPositionTitle(`Officer, ${selDir?.short_name || selDir?.name || 'Directorate'}`);
-                        }
-                      }}
+                      onChange={(e) => setSelectedDirectoryId(Number(e.target.value))}
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none font-semibold text-slate-800"
                     >
                       {availableDirectories.map((dir) => {
@@ -907,85 +846,10 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none font-semibold text-slate-800"
                     >
                       <option value="Officer">Officer (Civil Servant Desk)</option>
-                      <option value="Directory Lead">Directory Lead (Director / Operational Head)</option>
-                      <option value="Department Head">Department Head (Executive Authority)</option>
+                      <option value="Directory Lead">Directory Lead (Director)</option>
+                      <option value="Department Head">Department Head (Executive)</option>
                       <option value="System Admin">System Admin (IT Administrator)</option>
                     </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Confidentiality &amp; Document Clearance Level
-                  </label>
-                  <select
-                    value={clearanceLevel}
-                    onChange={(e) => setClearanceLevel(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800"
-                  >
-                    <option value="Level 1 - Standard / Routine">Level 1 - Standard / Routine Correspondence</option>
-                    <option value="Level 2 - Confidential / Directorate Directives">Level 2 - Confidential / Directorate Directives</option>
-                    <option value="Level 3 - Secret & Executive Directives">Level 3 - Secret &amp; Executive Directives</option>
-                  </select>
-                </div>
-
-                {/* Governance Authority Toggles */}
-                <div className="space-y-2 pt-1">
-                  <label className="block text-xs font-semibold text-slate-700">Governance &amp; Authority Privileges</label>
-                  <div className="grid grid-cols-1 gap-2">
-                    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition">
-                      <input
-                        type="checkbox"
-                        checked={canSign}
-                        onChange={(e) => setCanSign(e.target.checked)}
-                        className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <div className="text-xs">
-                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                          <PenTool className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Authorized Outgoing Signatory</span>
-                        </div>
-                        <p className="text-slate-500 text-[11px] mt-0.5">
-                          Grants legal rights to affix digital cryptographic signatures to outbound correspondence.
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition">
-                      <input
-                        type="checkbox"
-                        checked={canSeal}
-                        onChange={(e) => setCanSeal(e.target.checked)}
-                        className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <div className="text-xs">
-                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                          <Stamp className="w-3.5 h-3.5 text-blue-600" />
-                          <span>Official Seal &amp; Stamp Custodian</span>
-                        </div>
-                        <p className="text-slate-500 text-[11px] mt-0.5">
-                          Authorizes application of the authentic HZSITD departmental seal to finalized letters.
-                        </p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 p-2.5 rounded-xl border border-slate-200 hover:bg-slate-50/80 cursor-pointer transition">
-                      <input
-                        type="checkbox"
-                        checked={isCrossDirectorate}
-                        onChange={(e) => setIsCrossDirectorate(e.target.checked)}
-                        className="mt-0.5 rounded text-purple-600 focus:ring-purple-500"
-                      />
-                      <div className="text-xs">
-                        <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                          <Building className="w-3.5 h-3.5 text-purple-600" />
-                          <span>Cross-Directorate Reviewer Clearance</span>
-                        </div>
-                        <p className="text-slate-500 text-[11px] mt-0.5">
-                          Grants cross-directorate inspection clearance (required for Legal, Internal Audit, and Exec Staff).
-                        </p>
-                      </div>
-                    </label>
                   </div>
                 </div>
               </div>
@@ -994,7 +858,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
               <div className="space-y-3.5">
                 <div className="flex items-center gap-2 pb-1.5 border-b border-slate-100">
                   <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Section 3: Security &amp; Onboarding Credentials
+                    Section 3: Security &amp; Credentials
                   </span>
                 </div>
 
@@ -1033,22 +897,10 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
                       className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none text-slate-800 font-medium"
                     >
                       <option value="active">Active (Immediate Login Permitted)</option>
-                      <option value="pending">Pending HR / Biometric Verification</option>
+                      <option value="pending">Pending HR / Verification</option>
                     </select>
                   </div>
                 </div>
-
-                <label className="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer pt-1">
-                  <input
-                    type="checkbox"
-                    checked={mustChangePassword}
-                    onChange={(e) => setMustChangePassword(e.target.checked)}
-                    className="rounded text-purple-600 focus:ring-purple-500"
-                  />
-                  <span className="font-medium">
-                    Require officer to change password upon first login (Recommended for audit compliance)
-                  </span>
-                </label>
               </div>
 
               {/* Modal Actions */}
