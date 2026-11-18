@@ -31,7 +31,8 @@ import {
   useGetAdminUsersListQuery,
   useCreateAdminUserMutation,
   useSetUserStatusMutation,
-  useResetUserPasswordByAdminMutation
+  useResetUserPasswordByAdminMutation,
+  useGetRolesListQuery
 } from '../services/userManagementApi';
 import { useGetDirectoriesListQuery } from '@/modules/directories/services/directoryApi';
 import { mergeDirectories } from '@/modules/directories/constants/directories';
@@ -133,6 +134,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
   const isAdmin = activeRole === 'System Admin';
 
   const { data: remoteData } = useGetAdminUsersListQuery();
+  const { data: rolesData } = useGetRolesListQuery();
   const [createUserApi, { isLoading: isCreating }] = useCreateAdminUserMutation();
   const [setUserStatusApi] = useSetUserStatusMutation();
   const [resetPasswordApi] = useResetUserPasswordByAdminMutation();
@@ -300,6 +302,14 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       positionTitle.trim() ||
       `${selectedRole} - ${resolvedDir?.short_name || resolvedDir?.name || 'HZSITD'}`;
 
+    const matchingRole = rolesData?.data?.find(
+      (r) =>
+        r.role_name.toLowerCase().includes(selectedRole.toLowerCase().split(' ')[0]) ||
+        (selectedRole === 'Department Head' && r.role_name.toLowerCase().includes('director')) ||
+        (selectedRole === 'Directory Lead' && r.role_name.toLowerCase().includes('director'))
+    );
+    const resolvedRoleId = matchingRole?.role_id || (selectedRole === 'System Admin' ? 1 : 2);
+
     const payload = {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
@@ -309,7 +319,7 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
       password,
       account_status: initialAccountStatus,
       initial_directory_id: resolvedDirId,
-      initial_role_id: selectedRole === 'System Admin' ? 1 : selectedRole === 'Department Head' ? 2 : selectedRole === 'Directory Lead' ? 3 : 4,
+      initial_role_id: resolvedRoleId,
       position_title: resolvedPosition,
       clearance_level: clearanceLevel,
       can_sign: canSign,
@@ -319,49 +329,76 @@ export const UsersManager: React.FC<UsersManagerProps> = ({
     };
 
     try {
-      await createUserApi(payload).unwrap();
-      setFormSuccess('Officer account created successfully.');
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setFormSuccess(null);
-      }, 1000);
-    } catch {
-      const newUser: User = {
-        id: Date.now(),
-        user_id: Date.now(),
-        employee_number: employeeNumber.trim() || generateNextEmployeeNumber(),
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
-        username: email.split('@')[0],
-        email: email.trim(),
-        phone: phone.trim() || '+251 91 100 0000',
-        role: selectedRole,
-        position_title: resolvedPosition,
-        directory_id: resolvedDirId,
-        directory_name: resolvedDir?.name || 'Zonal Directorate',
-        account_status: initialAccountStatus,
-        clearance_level: clearanceLevel,
-        can_sign: canSign,
-        can_seal: canSeal,
-        is_cross_directorate: isCrossDirectorate,
-        must_change_password: mustChangePassword,
-      };
-      setLocalStaff((prev) => [newUser, ...prev]);
-      setFormSuccess('Officer added (local session synced).');
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setFormSuccess(null);
-      }, 1000);
-    }
+      const res = await createUserApi(payload).unwrap();
+      const newUserId = res?.data?.user_id || res?.data?.id;
+      if (newUserId && initialAccountStatus === 'active') {
+        try {
+          await setUserStatusApi({ user_id: newUserId, account_status: 'active' }).unwrap();
+        } catch (statusErr) {
+          console.warn('Auto-activation note:', statusErr);
+        }
+      }
 
-    setFirstName('');
-    setLastName('');
-    setEmail('');
-    setEmployeeNumber('');
-    setPhone('');
-    setPositionTitle('');
-    setPassword('');
+      setFormSuccess('Personnel account registered successfully in government records.');
+      setTimeout(() => {
+        setIsModalOpen(false);
+        setFormSuccess(null);
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setEmployeeNumber('');
+        setPhone('');
+        setPositionTitle('');
+        setPassword('');
+      }, 1000);
+    } catch (err: any) {
+      console.error('Failed to create user on server:', err);
+      const apiMsg =
+        err?.data?.error?.message ||
+        err?.data?.message ||
+        (Array.isArray(err?.data?.error?.details)
+          ? err.data.error.details.map((d: any) => `${d.field}: ${d.message}`).join(', ')
+          : null);
+
+      if (apiMsg) {
+        setFormError(apiMsg);
+      } else {
+        const newUser: User = {
+          id: Date.now(),
+          user_id: Date.now(),
+          employee_number: employeeNumber.trim() || generateNextEmployeeNumber(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
+          username: email.split('@')[0],
+          email: email.trim(),
+          phone: phone.trim() || '+251 91 100 0000',
+          role: selectedRole,
+          position_title: resolvedPosition,
+          directory_id: resolvedDirId,
+          directory_name: resolvedDir?.name || 'Zonal Directorate',
+          account_status: initialAccountStatus,
+          clearance_level: clearanceLevel,
+          can_sign: canSign,
+          can_seal: canSeal,
+          is_cross_directorate: isCrossDirectorate,
+          must_change_password: mustChangePassword,
+        };
+        setLocalStaff((prev) => [newUser, ...prev]);
+        setFormSuccess('Officer added (local offline session).');
+        setTimeout(() => {
+          setIsModalOpen(false);
+          setFormSuccess(null);
+          setFirstName('');
+          setLastName('');
+          setEmail('');
+          setEmployeeNumber('');
+          setPhone('');
+          setPositionTitle('');
+          setPassword('');
+        }, 1000);
+      }
+    }
   };
 
   const handleToggleStatus = async (user: User, newStatus: AccountStatus) => {

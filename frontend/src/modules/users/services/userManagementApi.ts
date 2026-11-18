@@ -39,11 +39,36 @@ export const userManagementApi = apiSlice.injectEndpoints({
     }),
 
     createAdminUser: builder.mutation<{ success: boolean; data: any }, CreateAdminUserRequest>({
-      query: (body) => ({
-        url: '/users',
-        method: 'POST',
-        body,
-      }),
+      query: (body) => {
+        const payload: Record<string, any> = {
+          first_name: body.first_name.trim(),
+          last_name: body.last_name.trim(),
+          email: body.email.trim(),
+          password: body.password,
+        };
+
+        if (body.employee_number?.trim()) {
+          payload.employee_number = body.employee_number.trim();
+        }
+        if (body.phone?.trim()) {
+          payload.phone = body.phone.trim();
+        }
+
+        if (body.initial_role_id && body.initial_directory_id) {
+          payload.role_assignments = [
+            {
+              role_id: Number(body.initial_role_id),
+              directory_id: Number(body.initial_directory_id),
+            },
+          ];
+        }
+
+        return {
+          url: '/users',
+          method: 'POST',
+          body: payload,
+        };
+      },
       invalidatesTags: ['Users'],
     }),
 
