@@ -683,19 +683,17 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       setLetterTypeNotice(
         'Upload Mode Active: Message content hidden. Attach your pre-scanned official letter document below (PDF, Word, or Scanned Image).'
       );
-      const scanned = SCANNED_LETTER_TYPES.find((s) => s.id === selectedScannedTypeId) || SCANNED_LETTER_TYPES[0];
-      if (!subject || subject === initialSubject || LETTER_TYPES.some((lt) => lt.defaultSubject === subject)) {
+      // Only prefill subject if user hasn't typed anything yet
+      if (!subject.trim()) {
+        const scanned = SCANNED_LETTER_TYPES.find((s) => s.id === selectedScannedTypeId) || SCANNED_LETTER_TYPES[0];
         setSubject(scanned.defaultSubject);
       }
     } else {
       const selectedType = LETTER_TYPES.find((t) => t.id === selectedLetterTypeId) || LETTER_TYPES[0];
-      setBody(selectedType.defaultBody);
-      if (!subject || subject === initialSubject || SCANNED_LETTER_TYPES.some((st) => st.defaultSubject === subject)) {
-        setSubject(selectedType.defaultSubject);
-      }
       setLetterTypeNotice(
-        `Generate Mode Active: ${selectedType.name} (${selectedType.amharicName}) loaded. Message content visible for drafting.`
+        `Generate Mode Active: ${selectedType.name} (${selectedType.amharicName}) active. Message content visible for drafting.`
       );
+      // Preserve whatever text the user has already typed; do not force-overwrite body!
     }
   };
 
