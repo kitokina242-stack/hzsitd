@@ -184,6 +184,53 @@ We hereby issue this official clearance and strong recommendation.`,
   },
 ];
 
+// Scanned physical letter document types (for Upload mode)
+interface ScannedLetterTypeOption {
+  id: string;
+  name: string;
+  amharicName: string;
+  description: string;
+  defaultSubject: string;
+}
+
+const SCANNED_LETTER_TYPES: ScannedLetterTypeOption[] = [
+  {
+    id: 'scanned_official',
+    name: 'Scanned Official Paper Letter',
+    amharicName: 'የተቃኘ ይፋዊ ደብዳቤ',
+    description: 'Scanned digital copy of official signed & sealed correspondence.',
+    defaultSubject: 'Official Scanned Correspondence (ይፋዊ የተቃኘ ደብዳቤ)',
+  },
+  {
+    id: 'scanned_directive',
+    name: 'Scanned Executive Directive / Circular',
+    amharicName: 'የተቃኘ መመሪያና ውሳኔ',
+    description: 'Scanned copy of binding departmental directive or policy notice.',
+    defaultSubject: 'Executive Directive: Implementation Order (የሥራ መመሪያና ውሳኔ)',
+  },
+  {
+    id: 'scanned_memo',
+    name: 'Scanned Technical Memorandum',
+    amharicName: 'የተቃኘ የውስጥ ማስታወሻ',
+    description: 'Scanned copy of inter-office memorandum or action minute.',
+    defaultSubject: 'Internal Memorandum: Operational Action (የውስጥ ማስታወሻ)',
+  },
+  {
+    id: 'scanned_requisition',
+    name: 'Scanned Budget & Requisition Vouchers',
+    amharicName: 'የተቃኘ የበጀትና የግዢ ጥያቄ',
+    description: 'Scanned procurement voucher, budget sheet, or proforma invoice.',
+    defaultSubject: 'Logistical & Budgetary Requisition (የበጀትና የቁሳቁስ ጥያቄ)',
+  },
+  {
+    id: 'scanned_external',
+    name: 'Scanned External Incoming Letter',
+    amharicName: 'የተቃኘ የውጭ ደብዳቤ',
+    description: 'Scanned communication from partner ministries or regional offices.',
+    defaultSubject: 'External Agency Correspondence (የውጭ ተቋም ደብዳቤ)',
+  },
+];
+
 // Fallback staff list across all directorates with comprehensive roles and titles
 const FALLBACK_USERS: User[] = [
   {
@@ -337,8 +384,10 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
   // Mode: Editor vs Template Preview Mode (Completion Step)
   const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-  // Form state
+  // Letter Creation Mode: 'generate' (Digital Template Draft) vs 'upload' (Scanned Physical Document)
+  const [letterMode, setLetterMode] = useState<'generate' | 'upload'>('generate');
   const [selectedLetterTypeId, setSelectedLetterTypeId] = useState<string>('general_official');
+  const [selectedScannedTypeId, setSelectedScannedTypeId] = useState<string>('scanned_official');
   const [letterTypeNotice, setLetterTypeNotice] = useState<string | null>(null);
 
   const [subject, setSubject] = useState(initialSubject);
@@ -426,6 +475,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             signature_id: 1,
             signature_reference: 'SIG-EXEC-9941 (Dr. Bezabih Alemu - RSA-4096 Digital Certificate)',
             signature_type: 'digital_certificate' as const,
+            signature_image_url: '/signatures/bezabih-sig.png',
+            signer_name: 'Dr. Bezabih Alemu',
             is_active: true,
             signed_by: 1,
           },
@@ -433,6 +484,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             signature_id: 2,
             signature_reference: 'SIG-DIR-8812 (Eng. Yohannes Haile - Directorate PKI Stroke)',
             signature_type: 'handwritten_image' as const,
+            signature_image_url: '/signatures/yohannes-sig.png',
+            signer_name: 'Eng. Yohannes Haile',
             is_active: true,
             signed_by: 2,
           },
@@ -440,6 +493,8 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             signature_id: 3,
             signature_reference: 'SIG-OFF-7721 (Civil Service Authenticated Token)',
             signature_type: 'digital_certificate' as const,
+            signature_image_url: '/signatures/almaz-sig.png',
+            signer_name: 'Almaz Tesfaye',
             is_active: true,
             signed_by: 4,
           },
@@ -454,24 +509,28 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
           {
             stamp_id: 1,
             stamp_name: 'Official Executive Department Seal (HZSITD Gold Seal - Transparent)',
+            stamp_image_url: '/seals/hzsitd-gold-seal.png',
             directory_id: 1,
             is_active: true,
           },
           {
             stamp_id: 2,
             stamp_name: 'Software Directorate Authentication Round Stamp (Transparent Red Ink)',
+            stamp_image_url: '/seals/software-dir-seal.png',
             directory_id: 2,
             is_active: true,
           },
           {
             stamp_id: 3,
             stamp_name: 'Infrastructure & Hardware Desk Verification Stamp (Transparent Purple Ink)',
+            stamp_image_url: '/seals/infra-desk-seal.png',
             directory_id: 3,
             is_active: true,
           },
           {
             stamp_id: 4,
             stamp_name: 'Cybersecurity & Standards Verification Stamp (Transparent Blue Ink)',
+            stamp_image_url: '/seals/cyber-desk-seal.png',
             directory_id: 4,
             is_active: true,
           },
@@ -582,11 +641,15 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
   // Handle Letter Type change and generate starter content (Comment requirement 5)
   const handleSelectLetterType = (typeId: string) => {
+    if (typeId === 'switch_to_upload') {
+      handleSetLetterMode('upload');
+      return;
+    }
     setSelectedLetterTypeId(typeId);
     const selectedType = LETTER_TYPES.find((t) => t.id === typeId);
     if (selectedType) {
       setBody(selectedType.defaultBody);
-      if (!subject || subject === initialSubject) {
+      if (!subject || subject === initialSubject || subject.includes('Scanned')) {
         setSubject(selectedType.defaultSubject);
       }
       setLetterTypeNotice(
@@ -597,6 +660,42 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       else if (typeId === 'internal_memo') setSelectedTemplateId(3);
       else if (typeId === 'budget_request') setSelectedTemplateId(4);
       else setSelectedTemplateId(1);
+    }
+  };
+
+  // Handle Scanned Document Type change
+  const handleSelectScannedType = (typeId: string) => {
+    if (typeId === 'switch_to_generate') {
+      handleSetLetterMode('generate');
+      return;
+    }
+    setSelectedScannedTypeId(typeId);
+    const scanned = SCANNED_LETTER_TYPES.find((s) => s.id === typeId);
+    if (scanned && (!subject || subject === initialSubject || LETTER_TYPES.some((lt) => lt.defaultSubject === subject))) {
+      setSubject(scanned.defaultSubject);
+    }
+  };
+
+  // Switch between 'generate' and 'upload' modes
+  const handleSetLetterMode = (mode: 'generate' | 'upload') => {
+    setLetterMode(mode);
+    if (mode === 'upload') {
+      setLetterTypeNotice(
+        'Upload Mode Active: Message content hidden. Attach your pre-scanned official letter document below (PDF, Word, or Scanned Image).'
+      );
+      const scanned = SCANNED_LETTER_TYPES.find((s) => s.id === selectedScannedTypeId) || SCANNED_LETTER_TYPES[0];
+      if (!subject || subject === initialSubject || LETTER_TYPES.some((lt) => lt.defaultSubject === subject)) {
+        setSubject(scanned.defaultSubject);
+      }
+    } else {
+      const selectedType = LETTER_TYPES.find((t) => t.id === selectedLetterTypeId) || LETTER_TYPES[0];
+      setBody(selectedType.defaultBody);
+      if (!subject || subject === initialSubject || SCANNED_LETTER_TYPES.some((st) => st.defaultSubject === subject)) {
+        setSubject(selectedType.defaultSubject);
+      }
+      setLetterTypeNotice(
+        `Generate Mode Active: ${selectedType.name} (${selectedType.amharicName}) loaded. Message content visible for drafting.`
+      );
     }
   };
 
@@ -668,8 +767,12 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       alert('Please enter a subject line for this letter.');
       return;
     }
-    if (!body.trim() && rawFiles.length === 0) {
-      alert('Please enter message text or attach a document file.');
+    if (letterMode === 'generate' && !body.trim()) {
+      alert('Please enter or generate message content for this letter.');
+      return;
+    }
+    if (letterMode === 'upload' && rawFiles.length === 0) {
+      alert('Please attach your scanned letter document (PDF, Word, or image).');
       return;
     }
     setIsPreviewMode(true);
@@ -689,8 +792,12 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
       alert('Please select a recipient employee.');
       return;
     }
-    if (!body.trim() && rawFiles.length === 0) {
-      alert('Please enter message text or attach a document file.');
+    if (letterMode === 'generate' && !body.trim()) {
+      alert('Please enter or generate message content.');
+      return;
+    }
+    if (letterMode === 'upload' && rawFiles.length === 0) {
+      alert('Please attach your scanned letter document (PDF, Word, or image).');
       return;
     }
 
@@ -701,11 +808,11 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
     let targetDirId = Number(recipientDirectoryId) || (owningDirId === 1 ? 2 : 1);
     let targetUserId = Number(assignedOfficerId) || 2;
 
-    const sourceType = rawFiles.length > 0 ? 'uploaded' : 'generated';
+    const sourceType = letterMode === 'upload' ? 'uploaded' : 'generated';
 
     const formData = new FormData();
     formData.append('subject', subject.trim());
-    formData.append('description', body.trim().slice(0, 160) || 'Official correspondence');
+    formData.append('description', body.trim().slice(0, 160) || (letterMode === 'upload' ? 'Scanned document dispatch' : 'Official correspondence'));
 
     const effectiveTmplId = selectedTemplateId || templates[0]?.template_id || 1;
     if (sourceType === 'generated') {
@@ -756,6 +863,7 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
 
   const resetForm = () => {
     setIsPreviewMode(false);
+    setLetterMode('generate');
     setSubject('');
     setBody('');
     setRawFiles([]);
@@ -823,29 +931,88 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
         {/* ======================================================== */}
         {!isPreviewMode && (
           <div className="p-6 overflow-y-auto space-y-4 text-sm text-slate-800">
-            {/* 1. TYPE OF LETTER SECTION (Comment requirement 5) */}
-            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+            {/* 1. TYPE OF LETTER & CREATION MODE (Comment requirement 2 & 5) */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <FileText className="w-3.5 h-3.5 text-emerald-700" />
-                  <span>Type of Letter *</span>
+                  <span>Choose Type of Letter *</span>
                 </label>
                 <span className="text-[10px] text-slate-500 font-medium">
-                  Auto-generates structured government template content
+                  {letterMode === 'generate'
+                    ? 'Generate mode: Editor enabled, file upload hidden'
+                    : 'Upload mode: File upload enabled, editor hidden'}
                 </span>
               </div>
 
-              <select
-                value={selectedLetterTypeId}
-                onChange={(e) => handleSelectLetterType(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-              >
-                {LETTER_TYPES.map((lt) => (
-                  <option key={lt.id} value={lt.id}>
-                    {lt.name} — {lt.amharicName} ({lt.description})
-                  </option>
-                ))}
-              </select>
+              {/* Mode Switcher Toggle: Generate vs Upload */}
+              <div className="grid grid-cols-2 gap-2 bg-slate-200/60 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => handleSetLetterMode('generate')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    letterMode === 'generate'
+                      ? 'bg-white text-emerald-800 shadow-xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Type: Generate Letter (አዘጋጅ / አመንጭ)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetLetterMode('upload')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                    letterMode === 'upload'
+                      ? 'bg-white text-emerald-800 shadow-xs border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Type: Upload Scanned File (የተቃኘ ሰነድ ጫን)</span>
+                </button>
+              </div>
+
+              {/* Dropdown for selected mode */}
+              {letterMode === 'generate' ? (
+                <div>
+                  <select
+                    value={selectedLetterTypeId}
+                    onChange={(e) => handleSelectLetterType(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    <optgroup label="── Structured Government Letter Types (Generate Mode) ──">
+                      {LETTER_TYPES.map((lt) => (
+                        <option key={lt.id} value={lt.id}>
+                          {lt.name} — {lt.amharicName} ({lt.description})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <option value="switch_to_upload">
+                      📤 Switch to: Upload Scanned Letter / File (የተቃኘ ሰነድ ጫን)...
+                    </option>
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <select
+                    value={selectedScannedTypeId}
+                    onChange={(e) => handleSelectScannedType(e.target.value)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  >
+                    <optgroup label="── Scanned Official Letter Document Categories (Upload Mode) ──">
+                      {SCANNED_LETTER_TYPES.map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.name} — {st.amharicName} ({st.description})
+                        </option>
+                      ))}
+                    </optgroup>
+                    <option value="switch_to_generate">
+                      ✍️ Switch to: Generate Official Letter (ዲጂታል ደብዳቤ አዘጋጅ)...
+                    </option>
+                  </select>
+                </div>
+              )}
 
               {/* Informative message showing content generated for this letter type */}
               {letterTypeNotice && (
@@ -854,7 +1021,9 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                   <div className="flex-1">
                     <p className="font-semibold">{letterTypeNotice}</p>
                     <p className="text-[11px] text-emerald-700 mt-0.5">
-                      You can edit or expand the generated text in the message body below.
+                      {letterMode === 'generate'
+                        ? 'Message content editor is active below with OCR scan & rich formatting tools.'
+                        : 'File attachment dropzone is active below. Attach your PDF, Word, or scanned images.'}
                     </p>
                   </div>
                 </div>
@@ -988,74 +1157,217 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
               )}
             </div>
 
-            {/* 3. SIGNATURE, STAMP, AND TEMPLATE DROPDOWNS (Comment requirement 3) */}
+            {/* 3. SIGNATURE, STAMP, AND TEMPLATE DROPDOWNS WITH IMAGE PREVIEWS (Comment requirement 1) */}
             <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
                   <span>Security Credentials &amp; Template Configuration *</span>
                 </span>
-                <span className="text-[10px] text-slate-500 font-medium">
-                  Select official template, digital certificate, and seal
+                <span className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                  <span>Images &amp; Credentials Displayed</span>
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Template Dropdown */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <FileText className="w-3 h-3 text-slate-500" />
-                    <span>Document Template *</span>
-                  </label>
-                  <select
-                    value={selectedTemplateId}
-                    onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                  >
-                    {templates.map((t) => (
-                      <option key={t.template_id} value={t.template_id}>
-                        {t.template_name}
-                      </option>
-                    ))}
-                  </select>
+                {/* 1. Template Dropdown & Image Preview */}
+                <div className="flex flex-col justify-between">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <FileText className="w-3 h-3 text-slate-500" />
+                        <span>Document Template *</span>
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-normal">Layout</span>
+                    </label>
+                    <select
+                      value={selectedTemplateId}
+                      onChange={(e) => setSelectedTemplateId(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                    >
+                      {templates.map((t) => (
+                        <option key={t.template_id} value={t.template_id}>
+                          {t.template_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Display Image / Preview of Template */}
+                  <div className="mt-2 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 hover:border-emerald-300 transition">
+                    <div className="w-11 h-14 rounded-sm border border-slate-300 bg-slate-50 p-1 flex flex-col justify-between flex-shrink-0 shadow-2xs">
+                      <div
+                        className={`h-1.5 rounded-xs w-full ${
+                          selectedTemplateId === 2
+                            ? 'bg-red-700'
+                            : selectedTemplateId === 3
+                            ? 'bg-blue-800'
+                            : selectedTemplateId === 4
+                            ? 'bg-purple-700'
+                            : 'bg-emerald-700'
+                        }`}
+                      />
+                      <div className="space-y-0.5 py-0.5">
+                        <div className="h-0.5 bg-slate-300 rounded-xs w-3/4 mx-auto" />
+                        <div className="h-0.5 bg-slate-200 rounded-xs w-full" />
+                        <div className="h-0.5 bg-slate-200 rounded-xs w-5/6" />
+                        <div className="h-0.5 bg-slate-200 rounded-xs w-4/6" />
+                      </div>
+                      <div className="flex items-center justify-between pt-0.5">
+                        <div className="h-1.5 w-1.5 rounded-full bg-emerald-600" />
+                        <div className="h-1.5 w-1.5 rounded-full border border-red-500" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="inline-block text-[8px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-1 rounded border border-emerald-200 mb-0.5">
+                        Official Layout
+                      </span>
+                      <p className="text-[10px] font-bold text-slate-800 truncate" title={activeTemplate?.template_name}>
+                        {activeTemplate?.template_name}
+                      </p>
+                      <p className="text-[9px] text-slate-500 line-clamp-2 leading-tight">
+                        {activeTemplate?.description}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Signature Dropdown */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <PenTool className="w-3 h-3 text-slate-500" />
-                    <span>Digital Signature *</span>
-                  </label>
-                  <select
-                    value={selectedSignatureId}
-                    onChange={(e) => setSelectedSignatureId(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                  >
-                    {signatures.map((s) => (
-                      <option key={s.signature_id} value={s.signature_id}>
-                        {s.signature_reference}
-                      </option>
-                    ))}
-                  </select>
+                {/* 2. Signature Dropdown & Image Preview */}
+                <div className="flex flex-col justify-between">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <PenTool className="w-3 h-3 text-slate-500" />
+                        <span>Digital Signature *</span>
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-normal">Cryptographic</span>
+                    </label>
+                    <select
+                      value={selectedSignatureId}
+                      onChange={(e) => setSelectedSignatureId(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                    >
+                      {signatures.map((s) => (
+                        <option key={s.signature_id} value={s.signature_id}>
+                          {s.signature_reference}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Display Image of Signature */}
+                  <div className="mt-2 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 hover:border-emerald-300 transition">
+                    <div className="w-14 h-14 rounded-md border border-slate-200 bg-slate-50/70 p-1 flex items-center justify-center flex-shrink-0 shadow-2xs overflow-hidden">
+                      {activeSignature?.signature_image_url ? (
+                        <img
+                          src={activeSignature.signature_image_url}
+                          alt={activeSignature.signature_reference}
+                          className="max-h-12 max-w-full object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      {(!activeSignature?.signature_image_url ||
+                        activeSignature.signature_type === 'digital_certificate') && (
+                        <div className="text-center w-full">
+                          <svg className="w-12 h-7 text-blue-900 mx-auto" viewBox="0 0 100 40">
+                            <path
+                              d="M 10 28 Q 30 8 50 22 T 75 16 T 90 24"
+                              fill="none"
+                              stroke="#1e3a8a"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            />
+                            <path
+                              d="M 20 32 Q 55 12 85 28"
+                              fill="none"
+                              stroke="#1e3a8a"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                          <span className="text-[7px] text-blue-800 font-serif italic block -mt-1 font-semibold truncate">
+                            {activeSignature?.signer_name || 'Dr. Bezabih Alemu'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 text-[8px] font-bold text-blue-800 bg-blue-50 px-1 rounded border border-blue-200 w-fit mb-0.5">
+                        <Check className="w-2.5 h-2.5 text-blue-600" />
+                        <span>PKI Certificate</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-800 truncate" title={activeSignature?.signature_reference}>
+                        {activeSignature?.signer_name || activeSignature?.signature_reference}
+                      </p>
+                      <p className="text-[9px] font-mono text-slate-500 truncate">
+                        {activeSignature?.signature_reference}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Stamp Dropdown */}
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center gap-1">
-                    <Stamp className="w-3 h-3 text-slate-500" />
-                    <span>Official Stamp / Seal *</span>
-                  </label>
-                  <select
-                    value={selectedStampId}
-                    onChange={(e) => setSelectedStampId(Number(e.target.value))}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
-                  >
-                    {stamps.map((st) => (
-                      <option key={st.stamp_id} value={st.stamp_id}>
-                        {st.stamp_name}
-                      </option>
-                    ))}
-                  </select>
+                {/* 3. Official Stamp / Seal Dropdown & Image Preview */}
+                <div className="flex flex-col justify-between">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <Stamp className="w-3 h-3 text-slate-500" />
+                        <span>Official Stamp / Seal *</span>
+                      </span>
+                      <span className="text-[9px] text-slate-400 font-normal">Department Seal</span>
+                    </label>
+                    <select
+                      value={selectedStampId}
+                      onChange={(e) => setSelectedStampId(Number(e.target.value))}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-800 focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                    >
+                      {stamps.map((st) => (
+                        <option key={st.stamp_id} value={st.stamp_id}>
+                          {st.stamp_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Display Image of Stamp */}
+                  <div className="mt-2 p-2 bg-white rounded-lg border border-slate-200 shadow-2xs flex items-center gap-2.5 hover:border-emerald-300 transition">
+                    <div className="w-14 h-14 rounded-full border-2 border-dashed border-red-700/80 bg-red-50/50 p-1 flex flex-col items-center justify-center flex-shrink-0 shadow-2xs text-red-700 rotate-[-4deg] overflow-hidden">
+                      {activeStamp?.stamp_image_url ? (
+                        <img
+                          src={activeStamp.stamp_image_url}
+                          alt={activeStamp.stamp_name}
+                          className="w-full h-full object-contain rounded-full"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                      <div className="text-center leading-none">
+                        <span className="text-[6px] font-bold tracking-tighter uppercase block text-red-800 font-sans">
+                          HZSITD
+                        </span>
+                        <Stamp className="w-3.5 h-3.5 my-0.5 text-red-700 mx-auto" />
+                        <span className="text-[5px] font-bold text-red-800 tracking-tight block">
+                          OFFICIAL SEAL
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1 text-[8px] font-bold text-red-800 bg-red-50 px-1 rounded border border-red-200 w-fit mb-0.5">
+                        <ShieldCheck className="w-2.5 h-2.5 text-red-700" />
+                        <span>Authentic Seal</span>
+                      </div>
+                      <p className="text-[10px] font-bold text-slate-800 truncate" title={activeStamp?.stamp_name}>
+                        {activeStamp?.stamp_name}
+                      </p>
+                      <p className="text-[9px] text-slate-500 truncate">
+                        ID #{activeStamp?.stamp_id} · Zonal Verified
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1102,134 +1414,159 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
               </div>
             </div>
 
-            {/* 5. MESSAGE CONTENT & FORMATTING */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <label className="block text-xs font-bold text-slate-800">
-                    Message Content *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setIsOcrOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 transition shadow-2xs"
-                    title="Scan physical paper document with camera or upload image (Amharic & English OCR)"
-                  >
-                    <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Scan to Text (OCR)</span>
-                    <span className="text-[10px] px-1 py-0.2 bg-emerald-200 text-emerald-800 font-mono rounded">
-                      አማ / ENG
-                    </span>
-                  </button>
+            {/* 5. MESSAGE CONTENT & FORMATTING (Only visible in 'generate' mode) */}
+            {letterMode === 'generate' && (
+              <div className="space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <label className="block text-xs font-bold text-slate-800">
+                      Message Content *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsOcrOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 transition shadow-2xs"
+                      title="Scan physical paper document with camera or upload image (Amharic & English OCR)"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Scan to Text (OCR)</span>
+                      <span className="text-[10px] px-1 py-0.2 bg-emerald-200 text-emerald-800 font-mono rounded">
+                        አማ / ENG
+                      </span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md border border-slate-200">
+                    <button
+                      type="button"
+                      title="Bold"
+                      onClick={() => formatText('**', '**')}
+                      className="p-1 rounded hover:bg-white text-slate-700 transition"
+                    >
+                      <Bold className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Italic"
+                      onClick={() => formatText('*', '*')}
+                      className="p-1 rounded hover:bg-white text-slate-700 transition"
+                    >
+                      <Italic className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Bullet List"
+                      onClick={() => formatText('\n• ')}
+                      className="p-1 rounded hover:bg-white text-slate-700 transition"
+                    >
+                      <List className="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-md border border-slate-200">
-                  <button
-                    type="button"
-                    title="Bold"
-                    onClick={() => formatText('**', '**')}
-                    className="p-1 rounded hover:bg-white text-slate-700 transition"
-                  >
-                    <Bold className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Italic"
-                    onClick={() => formatText('*', '*')}
-                    className="p-1 rounded hover:bg-white text-slate-700 transition"
-                  >
-                    <Italic className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    title="Bullet List"
-                    onClick={() => formatText('\n• ')}
-                    className="p-1 rounded hover:bg-white text-slate-700 transition"
-                  >
-                    <List className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
 
-              <textarea
-                ref={textareaRef}
-                rows={6}
-                placeholder="Type your official letter text here..."
-                value={body}
-                onChange={(e) => setBody(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs leading-relaxed focus:ring-2 focus:ring-emerald-600 focus:outline-none font-sans"
-              />
-            </div>
-
-            {/* 6. ATTACHMENTS DROPZONE */}
-            <div className="space-y-2">
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  if (e.dataTransfer.files) {
-                    handleFileUpload(e.dataTransfer.files);
-                  }
-                }}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-3 text-center cursor-pointer transition ${
-                  isDragging
-                    ? 'border-emerald-500 bg-emerald-50/50'
-                    : 'border-slate-300 bg-slate-50/60 hover:bg-slate-100 hover:border-slate-400'
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files) handleFileUpload(e.target.files);
-                  }}
+                <textarea
+                  ref={textareaRef}
+                  rows={6}
+                  placeholder="Type your official letter text here..."
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs leading-relaxed focus:ring-2 focus:ring-emerald-600 focus:outline-none font-sans"
                 />
-                <div className="flex items-center justify-center gap-2">
-                  <Upload className="w-4 h-4 text-slate-500" />
-                  <span className="text-xs font-semibold text-slate-700">
-                    {isUploading ? (
-                      'Uploading...'
-                    ) : (
-                      <>
-                        <span className="text-slate-900 font-bold">Attach file</span> (PDF, Word, Images - Max 25MB)
-                      </>
-                    )}
+              </div>
+            )}
+
+            {/* 6. ATTACHMENTS DROPZONE (Only visible in 'upload' mode) */}
+            {letterMode === 'upload' && (
+              <div className="space-y-2.5 p-3.5 bg-emerald-50/40 rounded-xl border border-emerald-200 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <Upload className="w-3.5 h-3.5 text-emerald-700" />
+                    <span>Upload Scanned Official Letter Document *</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
+                    Required for Dispatch
                   </span>
                 </div>
-              </div>
+                <p className="text-[11px] text-slate-500">
+                  Attach your scanned physical official correspondence file (PDF, Word, or high-resolution image).
+                </p>
 
-              {/* Attached files chips */}
-              {attachments.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                  {attachments.map((file, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 shadow-xs text-xs"
-                    >
-                      <span className="font-semibold text-slate-800 truncate">{file.original_name}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeAttachment(idx);
-                        }}
-                        className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition ml-2"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (e.dataTransfer.files) {
+                      handleFileUpload(e.dataTransfer.files);
+                    }
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition ${
+                    isDragging
+                      ? 'border-emerald-500 bg-emerald-50/70'
+                      : 'border-emerald-300 bg-white hover:bg-emerald-50/40 hover:border-emerald-400'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) handleFileUpload(e.target.files);
+                    }}
+                  />
+                  <div className="flex flex-col items-center justify-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mb-0.5">
+                      <Upload className="w-5 h-5" />
                     </div>
-                  ))}
+                    <span className="text-xs font-semibold text-slate-700">
+                      {isUploading ? (
+                        'Uploading...'
+                      ) : (
+                        <>
+                          <span className="text-emerald-800 font-bold">Click to Browse</span> or drag and drop scanned files here
+                        </>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      Accepted formats: PDF, Word (.docx), Scanned Images (PNG, JPG) — Max 25MB
+                    </span>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Attached files chips */}
+                {attachments.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                    {attachments.map((file, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-emerald-300 shadow-2xs text-xs"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <FileCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                          <span className="font-semibold text-slate-800 truncate">{file.original_name}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeAttachment(idx);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition ml-2 cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -1349,10 +1686,37 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
                 </div>
               </div>
 
-              {/* Letter Body */}
-              <div className="py-4 text-xs leading-relaxed text-slate-800 whitespace-pre-wrap font-serif-executive text-sm min-h-[140px]">
-                {body}
-              </div>
+              {/* Letter Body or Scanned Document Display */}
+              {letterMode === 'upload' ? (
+                <div className="py-6 px-4 my-2 bg-emerald-50/50 border-2 border-dashed border-emerald-300 rounded-xl text-center space-y-2.5">
+                  <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-2xs">
+                    <FileCheck className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">
+                      Scanned Official Physical Document Attached
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      The recipient will receive and review this authenticated scanned letter package:
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2 pt-1">
+                    {attachments.map((a, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-emerald-300 rounded-lg text-xs font-semibold text-emerald-950 shadow-2xs"
+                      >
+                        <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{a.original_name}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-4 text-xs leading-relaxed text-slate-800 whitespace-pre-wrap font-serif-executive text-sm min-h-[140px]">
+                  {body}
+                </div>
+              )}
 
               {/* Attachments Note in Letterhead */}
               {attachments.length > 0 && (
@@ -1412,10 +1776,27 @@ export const ComposeModal: React.FC<ComposeModalProps> = ({
             {isPreviewMode ? (
               <span className="inline-flex items-center gap-1.5 text-emerald-700 font-semibold">
                 <Check className="w-3.5 h-3.5" />
-                <span>Letter validated in selected template format</span>
+                <span>
+                  {letterMode === 'upload'
+                    ? 'Scanned letter package validated for official dispatch'
+                    : 'Letter validated in selected template format'}
+                </span>
               </span>
+            ) : letterMode === 'upload' ? (
+              attachments.length > 0 ? (
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{attachments.length} document file(s) attached and ready</span>
+                </span>
+              ) : (
+                <span className="text-amber-600 font-medium">Please attach scanned document file</span>
+              )
             ) : (
-              attachments.length > 0 && `${attachments.length} file(s) attached`
+              <span className="text-slate-500">
+                {body.trim()
+                  ? `${body.trim().split(/\s+/).filter(Boolean).length} words typed`
+                  : 'Drafting letter content'}
+              </span>
             )}
           </div>
 
